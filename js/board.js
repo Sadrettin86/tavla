@@ -1,8 +1,10 @@
 // Tahta görünümü: statik tahta resmi + pullar, vurgular, dokunma alanları ve animasyonlar.
 import { THEMES, geometry, renderBoard, checkerDefs, checkerMarkup, F } from './theme.js';
 
-const W = 520, H = 362, PX = 14, PY = 12;
-export const VIEW_W = W + 2 * PX, VIEW_H = H + 2 * PY;
+// PX/PY: tahta resminin gölge payı. VX/VY: ekranda bırakılan pay (dar tutuldu, tahta büyük görünsün;
+// gölge kenardan taşabilir).
+const W = 520, H = 362, PX = 14, PY = 12, VX = 4, VY = 3;
+export const VIEW_W = W + 2 * VX, VIEW_H = H + 2 * VY;
 const NS = 'http://www.w3.org/2000/svg';
 
 const el = (tag, attrs = {}, html = '') => {
@@ -21,9 +23,9 @@ export class BoardView {
     this.g = geometry(W, H);
     this.viewer = 'w';
     this.themeKey = null;
-    this.svg = el('svg', { viewBox: `${-PX} ${-PY} ${VIEW_W} ${VIEW_H}`, class: 'board-svg', role: 'img', 'aria-label': 'Tavla tahtası' });
+    this.svg = el('svg', { viewBox: `${-VX} ${-VY} ${VIEW_W} ${VIEW_H}`, class: 'board-svg', role: 'img', 'aria-label': 'Tavla tahtası' });
     this.defs = el('defs');
-    this.bg = el('image', { x: -PX, y: -PY, width: VIEW_W, height: VIEW_H, preserveAspectRatio: 'none' });
+    this.bg = el('image', { x: -PX, y: -PY, width: W + 2 * PX, height: H + 2 * PY, preserveAspectRatio: 'none' });
     this.lHl = el('g', { class: 'l-hl' });
     this.lLast = el('g', { class: 'l-last' });
     this.lOff = el('g', { class: 'l-off' });
@@ -55,7 +57,7 @@ export class BoardView {
   // ekran koordinatı (CSS piksel, sarmalayıcıya göre)
   toPx(x, y) {
     const u = this.wrap.clientWidth / VIEW_W;
-    return { x: (x + PX) * u, y: (y + PY) * u, u };
+    return { x: (x + VX) * u, y: (y + VY) * u, u };
   }
   get right() { return this.g.right; }
   get left() { return this.g.left; }

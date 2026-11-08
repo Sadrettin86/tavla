@@ -527,7 +527,7 @@ class App {
     const seated = G.players.w && G.players.b;
     if (this.spectator()) { label = 'İzliyorsun'; ic = 'eye'; }
     else if (G.phase === 'opening') {
-      if (!seated) label = 'Rakip bekleniyor';
+      if (!seated) label = 'Bekleniyor';
       else if (this.mode === 'local') { enabled = !G.opening.w && !G.opening.b; ready = enabled; }
       else if (G.opening[this.myColor]) label = 'Rakip atacak';
       else { enabled = true; ready = true; }
@@ -537,7 +537,8 @@ class App {
       if (my) { label = 'Tamam'; ic = 'check'; enabled = Rules.canEndTurn(G); ready = enabled; }
       else label = 'Sıra rakipte';
     } else { label = 'El bitti'; ic = 'crown'; }
-    main.innerHTML = `${icon[ic](18)}<span class="lbl">${label}</span>`;
+    // dar sütunda yazı sığsın: simge yalnızca basılabilir durumda
+    main.innerHTML = `${enabled ? icon[ic](18) : ''}<span class="lbl">${label}</span>`;
     main.disabled = !enabled;
     main.classList.toggle('ready', ready);
     $('#btnUndo').disabled = !(my && G.phase === 'move' && G.moves.length > 0);
