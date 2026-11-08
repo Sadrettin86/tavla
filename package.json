@@ -1,0 +1,8 @@
+{
+  "name": "tavla",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/rules.test.mjs"
+  }
+}

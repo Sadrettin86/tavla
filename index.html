@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#160e09">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tavla">
+<meta name="description" content="Arkadaşınla online tavla. Link at, oyna.">
+<title>Tavla</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Ultra&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body data-screen="lobby">
+
+<!-- ============================================================ GİRİŞ -->
+<section id="lobby" class="screen screen-form" aria-label="Giriş">
+  <div class="form-col two">
+    <div class="col-a">
+      <header class="brand">
+        <div class="brand-row"><span id="logo"></span><h1>Tavla</h1></div>
+        <p class="tagline">Arkadaşınla online, bir linkle.</p>
+      </header>
+      <div class="hero-board" id="heroBoard" aria-hidden="true"></div>
+    </div>
+    <div class="col-b">
+      <div class="field">
+        <label for="name">Adın</label>
+        <input id="name" type="text" maxlength="16" autocomplete="nickname" placeholder="Adını yaz" enterkeyhint="done">
+      </div>
+      <div class="field">
+        <span class="label" id="lblTo">Maç kaç sayıya?</span>
+        <div class="seg" role="group" aria-labelledby="lblTo" id="segTo">
+          <button type="button" data-to="1">1</button>
+          <button type="button" data-to="3">3</button>
+          <button type="button" data-to="5">5</button>
+          <button type="button" data-to="7">7</button>
+        </div>
+      </div>
+      <div class="field">
+        <span class="label" id="lblTheme">Tahta</span>
+        <div class="swatches" role="group" aria-labelledby="lblTheme" id="segTheme"></div>
+      </div>
+      <p class="notice" id="fbNotice" hidden></p>
+      <button type="button" class="btn primary big" id="btnCreate"><span class="ic" data-icon="link"></span>Oda kur</button>
+      <div class="row2">
+        <button type="button" class="btn" id="btnLocal">Aynı telefonda</button>
+        <button type="button" class="btn ghost" id="btnBot" disabled>Bota karşı <span class="tag">Yakında</span></button>
+      </div>
+      <p class="foot">Türk tavlası kurallarıyla: mars 2 sayı, açılışta büyük atan zarı yeniden atar.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ ODAYA KATIL -->
+<section id="join" class="screen screen-form" aria-label="Odaya katıl">
+  <div class="form-col">
+    <header class="brand">
+      <div class="brand-row"><span class="logo-slot"></span><h1>Tavla</h1></div>
+      <p class="tagline">Seni bir oyuna çağırdılar.</p>
+    </header>
+    <div class="join-card">
+      <span class="label">Oda</span>
+      <div class="room-code" id="joinCode">------</div>
+    </div>
+    <div class="field">
+      <label for="joinName">Adın</label>
+      <input id="joinName" type="text" maxlength="16" autocomplete="nickname" placeholder="Adını yaz" enterkeyhint="go">
+    </div>
+    <p class="notice" id="joinError" hidden></p>
+    <button type="button" class="btn primary big" id="btnJoin">Oyuna katıl</button>
+    <button type="button" class="btn text" id="btnJoinBack">Ana sayfaya dön</button>
+  </div>
+</section>
+
+<!-- ============================================================ BEKLEME -->
+<section id="room" class="screen screen-form" aria-label="Oda">
+  <div class="form-col">
+    <div class="topbar">
+      <button type="button" class="icon-btn" id="btnRoomBack" aria-label="Geri"><span class="ic" data-icon="back"></span></button>
+      <div class="topbar-title">Oda</div>
+      <div class="code-chip" id="roomCode">------</div>
+    </div>
+    <div class="seats">
+      <div class="seat"><div class="seat-av me" id="seatMe"></div><div class="seat-name" id="seatMeName">Sen</div><div class="seat-note ok"><i class="dot"></i>Hazır</div></div>
+      <div class="seat-vs">–</div>
+      <div class="seat"><div class="seat-av empty" id="seatThem"><span class="ic" data-icon="user"></span></div><div class="seat-name" id="seatThemName">Arkadaşın</div><div class="seat-note" id="seatThemNote">bekleniyor <span class="dots"><i></i><i></i><i></i></span></div></div>
+    </div>
+    <h2 class="display">Oda hazır</h2>
+    <p class="lead">Bu linki arkadaşına gönder. Linki açtığı anda karşına oturur, oyun başlar.</p>
+    <div class="linkbox">
+      <span class="ic" data-icon="link"></span>
+      <span class="linktext" id="roomLink"></span>
+      <button type="button" class="icon-btn small" id="btnCopy" aria-label="Linki kopyala"><span class="ic" data-icon="copy"></span></button>
+    </div>
+    <button type="button" class="btn primary big" id="btnShare"><span class="ic" data-icon="share"></span>Linki paylaş</button>
+    <div class="list">
+      <div class="list-row"><span>Maç</span><b id="roomTo">5 sayı</b></div>
+      <div class="list-row"><span>Tahta</span><b id="roomTheme">Ceviz</b></div>
+      <div class="list-row"><span>Kurallar</span><b>Türk tavlası</b></div>
+    </div>
+    <div class="row2">
+      <button type="button" class="btn" id="btnToBoard">Tahtayı gör</button>
+      <button type="button" class="btn text" id="btnCloseRoom">Odadan çık</button>
+    </div>
+    <p class="hint"><span class="ic" data-icon="phone"></span>Oyun sırasında telefonu yan çevir, tahta büyür.</p>
+  </div>
+</section>
+
+<!-- ============================================================ OYUN -->
+<section id="game" class="screen" aria-label="Oyun">
+  <div class="game">
+    <div class="rail rail-left">
+      <div class="pcard" id="cardTop"><div class="pc-in"></div></div>
+      <div class="score" id="score"></div>
+      <div class="pcard" id="cardBottom"><div class="pc-in"></div></div>
+    </div>
+    <div class="stage" id="stage">
+      <div class="board-wrap" id="boardWrap">
+        <div class="dice-layer" id="diceLayer"></div>
+      </div>
+      <p class="rotate-hint"><span class="ic" data-icon="phone"></span>Telefonu yan çevir, tahta büyür.</p>
+    </div>
+    <div class="rail rail-right">
+      <div class="btn-row">
+        <button type="button" class="icon-btn" id="btnMenu" aria-label="Menü"><span class="ic" data-icon="menu"></span></button>
+        <button type="button" class="icon-btn" id="btnSound" aria-label="Ses"><span class="ic" data-icon="sound"></span></button>
+      </div>
+      <button type="button" class="btn" id="btnLaf" aria-label="Laf at"><span class="ic" data-icon="chat"></span><span class="lbl">Laf at</span></button>
+      <div class="spacer"></div>
+      <button type="button" class="btn" id="btnUndo" aria-label="Geri al"><span class="ic" data-icon="undo"></span><span class="lbl">Geri al</span></button>
+      <button type="button" class="btn primary" id="btnMain">Zar at</button>
+    </div>
+  </div>
+
+  <!-- laf atma -->
+  <div class="panel" id="lafPanel" hidden role="dialog" aria-label="Laf at">
+    <div class="panel-head"><h3>Laf at</h3><button type="button" class="icon-btn bare" id="btnLafClose" aria-label="Kapat"><span class="ic" data-icon="close"></span></button></div>
+    <div class="chips" id="lafChips"></div>
+    <div class="sep"></div>
+    <div class="reacts" id="lafReacts"></div>
+  </div>
+
+  <!-- menü -->
+  <div class="sheet" id="menu" hidden role="dialog" aria-label="Menü">
+    <div class="sheet-card">
+      <div class="panel-head"><h3>Menü</h3><button type="button" class="icon-btn bare" id="btnMenuClose" aria-label="Kapat"><span class="ic" data-icon="close"></span></button></div>
+      <button type="button" class="menu-row" id="mSound"><span class="ic" data-icon="sound"></span><span>Ses efektleri</span><b id="mSoundVal">Açık</b></button>
+      <button type="button" class="menu-row" id="mVoice"><span class="ic" data-icon="voice"></span><span>Zar anonsu</span><b id="mVoiceVal">Açık</b></button>
+      <div class="menu-row static"><span class="ic" data-icon="palette"></span><span>Tahta</span></div>
+      <div class="swatches" id="mTheme"></div>
+      <button type="button" class="menu-row" id="mLink"><span class="ic" data-icon="link"></span><span>Oda linkini kopyala</span></button>
+      <button type="button" class="menu-row" id="mResign"><span class="ic" data-icon="flag"></span><span>Bu eli bırak</span></button>
+      <button type="button" class="menu-row" id="mExit"><span class="ic" data-icon="exit"></span><span>Ana sayfaya dön</span></button>
+    </div>
+  </div>
+
+  <!-- sonuç -->
+  <div class="result" id="result" hidden role="dialog" aria-label="Sonuç">
+    <div class="result-card">
+      <div class="result-kicker" id="resKicker"></div>
+      <div class="result-title" id="resTitle"></div>
+      <div class="result-score" id="resScore"></div>
+      <div class="result-stats" id="resStats"></div>
+      <div class="row2">
+        <button type="button" class="btn primary" id="btnNext">Sonraki el</button>
+        <button type="button" class="btn" id="btnHome">Ana sayfa</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- onay -->
+  <div class="sheet" id="confirm" hidden role="alertdialog" aria-labelledby="confirmText">
+    <div class="sheet-card small">
+      <p id="confirmText"></p>
+      <div class="row2">
+        <button type="button" class="btn" id="confirmNo">Vazgeç</button>
+        <button type="button" class="btn primary" id="confirmYes">Evet</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="globalToast" class="global-toast" role="status" hidden></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

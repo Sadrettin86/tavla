@@ -1,0 +1,29 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "rooms": {
+      "$room": {
+        "state": {
+          ".read": "$room.matches(/^[A-HJ-NP-Z2-9]{6}$/)",
+          ".write": "$room.matches(/^[A-HJ-NP-Z2-9]{6}$/)",
+          ".validate": "newData.isString() && newData.val().length < 40000"
+        },
+        "presence": {
+          ".read": "$room.matches(/^[A-HJ-NP-Z2-9]{6}$/)",
+          "$cid": {
+            ".write": "$room.matches(/^[A-HJ-NP-Z2-9]{6}$/) && $cid.matches(/^[a-f0-9]{16}$/)",
+            ".validate": "newData.hasChildren(['name']) && newData.child('name').isString() && newData.child('name').val().length <= 24"
+          }
+        },
+        "chat": {
+          ".read": "$room.matches(/^[A-HJ-NP-Z2-9]{6}$/)",
+          "$msg": {
+            ".write": "$room.matches(/^[A-HJ-NP-Z2-9]{6}$/) && !data.exists()",
+            ".validate": "newData.hasChildren(['from', 'text', 'kind']) && newData.child('text').isString() && newData.child('text').val().length <= 120"
+          }
+        }
+      }
+    }
+  }
+}
