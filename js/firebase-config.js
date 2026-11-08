@@ -1,17 +1,13 @@
 // Firebase ayarları
-// Firebase konsolunda Proje ayarları > Uygulamalarınız > Web uygulaması altındaki
-// firebaseConfig nesnesini aşağıya yapıştır. Bu değerler gizli değildir; veritabanına
-// erişimi database.rules.json içindeki kurallar sınırlar.
-//
-// Örnek:
-// export const firebaseConfig = {
-//   apiKey: "AIza...",
-//   authDomain: "tavla-12345.firebaseapp.com",
-//   databaseURL: "https://tavla-12345-default-rtdb.europe-west1.firebasedatabase.app",
-//   projectId: "tavla-12345",
-//   storageBucket: "tavla-12345.firebasestorage.app",
-//   messagingSenderId: "1234567890",
-//   appId: "1:1234567890:web:abcdef"
-// };
+// Bu değerler gizli değildir; veritabanına erişimi database.rules.json içindeki kurallar sınırlar.
+// databaseURL: Realtime Database sayfasının üstünde yazan adres (konum: europe-west1, Belçika).
 
-export const firebaseConfig = null;
+export const firebaseConfig = {
+  apiKey: "AIzaSyAqMv0L8kM-Sm22Gv1bt5TNWbBQT9zNSek",
+  authDomain: "tavla-1c16a.firebaseapp.com",
+  databaseURL: "https://tavla-1c16a-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "tavla-1c16a",
+  storageBucket: "tavla-1c16a.firebasestorage.app",
+  messagingSenderId: "754917537721",
+  appId: "1:754917537721:web:4c18f71c787b211fb2a868"
+};
