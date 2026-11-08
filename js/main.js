@@ -542,30 +542,29 @@ class App {
     return !!(p && this.presence[p.id]);
   }
 
+  // Oyuncu kartları: yalnızca ad (ve rengini gösteren küçük pul). Sıradaki oyuncunun kartı hareketli ışıkla belirginleşir.
   renderRails() {
     const G = this.G;
     const v = this.viewer();
-    const card = (c) => {
+    const seated = !!(G.players.w && G.players.b);
+    const live = G.phase === 'move' || G.phase === 'roll';
+    const paint = (el, c) => {
       const p = G.players[c];
-      const name = p ? p.name : 'Bekleniyor';
-      const live = G.phase === 'move' || G.phase === 'roll';
-      let badge = '';
-      if (live && G.turn === c) badge = this.mode === 'local' ? 'Sıra onda' : c === this.myColor ? 'Sıra sende' : 'Oynuyor';
-      if (G.phase === 'opening' && p && !G.opening[c]) badge = 'Zar atacak';
-      const dot = this.mode === 'online' ? `<i class="pc-dot ${this.playerOnline(c) ? 'on' : ''}" title="${this.playerOnline(c) ? 'Bağlı' : 'Bağlı değil'}"></i>` : '';
-      return {
-        html: `<div class="pc-top">${checkerIcon(G.theme, c, 30, 'av' + c)}<div class="pc-name">${esc(name)}</div>${dot}</div><div class="pc-pip">Kalan yol <b>${Rules.pipCount(G.board, c)}</b></div>${badge ? `<div class="pc-badge">${badge}</div>` : ''}`,
-        turn: live && G.turn === c,
-      };
+      // sırası gelen; açılışta zarını henüz atmamış olanlar
+      const active = seated && ((live && G.turn === c) || (G.phase === 'opening' && !G.opening[c]));
+      const away = this.mode === 'online' && !!p && c !== this.myColor && !this.playerOnline(c);
+      const html = `<div class="pc-top">${checkerIcon(G.theme, c, 28, 'av' + c)}<div class="pc-name">${esc(p ? p.name : 'Bekleniyor')}</div></div>`;
+      const box = el.querySelector('.pc-in');
+      if (box._h !== html) { box.innerHTML = html; box._h = html; }
+      const was = el.classList.contains('turn');
+      el.classList.toggle('turn', active);
+      el.classList.toggle('away', away);
+      el.title = away ? 'Bağlı değil' : '';
+      if (active) el.setAttribute('aria-current', 'true'); else el.removeAttribute('aria-current');
+      if (active && !was) { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
     };
-    const top = card(other(v)), bottom = card(v);
-    $('#cardTop .pc-in').innerHTML = top.html;
-    $('#cardBottom .pc-in').innerHTML = bottom.html;
-    $('#cardTop').classList.toggle('turn', top.turn);
-    $('#cardBottom').classList.toggle('turn', bottom.turn);
-    const sc = G.match.score;
-    $('#score').innerHTML = `<div class="score-num" aria-label="Skor ${sc[v]} ${sc[other(v)]}"><span>${sc[v]}</span><i>–</i><span>${sc[other(v)]}</span></div><div class="score-to">${G.match.to} sayıya</div>` +
-      (this.spectator() ? `<div class="spectating">${icon.eye(14)}İzliyorsun</div>` : '');
+    paint($('#cardTop'), other(v));
+    paint($('#cardBottom'), v);
   }
 
   renderButtons() {
