@@ -120,7 +120,13 @@ class App {
     $('#btnMenuClose').addEventListener('click', () => { $('#menu').hidden = true; });
     $('#menu').addEventListener('click', (e) => { if (e.target.id === 'menu') $('#menu').hidden = true; });
     $('#mSound').addEventListener('click', () => this.toggleSound());
-    $('#mVoice').addEventListener('click', () => { this.settings.voice = !this.settings.voice; this.sound.voice = this.settings.voice; this.save(); this.paintMenu(); });
+    $('#mVoice').addEventListener('click', () => {
+      this.settings.voice = !this.settings.voice;
+      this.sound.voice = this.settings.voice;
+      this.save();
+      this.paintMenu();
+      if (this.settings.voice) this.sound.say('Şeşbeş');
+    });
     this.buildSwatches($('#mTheme'), (k) => this.changeTheme(k));
     $('#mLink').addEventListener('click', () => { this.copyLink(); $('#menu').hidden = true; });
     $('#mResign').addEventListener('click', () => this.resign());
@@ -135,7 +141,8 @@ class App {
     $('#btnHome').addEventListener('click', () => this.leave());
 
     // ses kilidini ilk dokunuşta aç
-    document.addEventListener('pointerdown', () => this.sound.unlock(), { passive: true });
+    // iPhone'da ses yalnızca gerçek dokunuşla açılır (pointerdown sayılmaz)
+    for (const ev of ['touchend', 'click', 'keydown']) document.addEventListener(ev, () => this.sound.unlock(), { capture: true, passive: true });
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && document.body.dataset.screen === 'game') this.keepAwake();
       this.updateTitle();
@@ -905,7 +912,7 @@ class App {
     this.sound.enabled = this.settings.sound;
     this.save();
     this.sound.unlock();
-    if (this.settings.sound) this.sound.place();
+    if (this.settings.sound) setTimeout(() => this.sound.place(), 80);
     this.paintMenu();
     if (this.G) this.renderButtons();
   }

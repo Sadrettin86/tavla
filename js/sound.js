@@ -1,40 +1,95 @@
 // Sesler kodla üretilir (Web Audio). Ses dosyası yok, telif derdi yok.
+//
+// iPhone notları:
+// - Ses ancak gerçek bir dokunuşta (touchend/click) açılabilir; pointerdown dokunmatikte sayılmaz.
+// - Web Audio, telefonun sessiz anahtarı açıkken susar. Ses açıksa oturumu "playback" yaparak
+//   (iOS 17+) ya da eski sürümlerde sessiz bir <audio> döngüsü çalarak bunu aşıyoruz.
+const IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+function silentWavURL() {
+  // 0,5 sn, 8 kHz, 8 bit, tek kanal sessizlik
+  const n = 4000;
+  const buf = new ArrayBuffer(44 + n);
+  const v = new DataView(buf);
+  const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVE'); w(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, 8000, true); v.setUint32(28, 8000, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true);
+  w(36, 'data'); v.setUint32(40, n, true);
+  for (let i = 0; i < n; i++) v.setUint8(44 + i, 128);
+  return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+}
+
 export class Sound {
   constructor() {
-    this.enabled = true;
+    this._enabled = true;
     this.voice = true;
     this.ctx = null;
     this.noise = null;
     this.trVoice = null;
-    this.unlockedSpeech = false;
+    this.speechReady = false;
+    this.silentEl = null;
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { if (this.silentEl) this.silentEl.pause(); return; }
+      if (this.ctx && this.ctx.state !== 'running' && this._enabled) this.ctx.resume().catch(() => {});
+      if (this.silentEl && this._enabled) this.silentEl.play().catch(() => {});
+    });
   }
 
+  get enabled() { return this._enabled; }
+  set enabled(on) {
+    this._enabled = !!on;
+    this.applySession();
+    if (this.silentEl) { if (on && !document.hidden) this.silentEl.play().catch(() => {}); else this.silentEl.pause(); }
+  }
+
+  // Ses açıksa sessiz anahtarı aş; kapalıysa diğer uygulamaların sesine karışma
+  applySession() {
+    try { if (navigator.audioSession) navigator.audioSession.type = this._enabled ? 'playback' : 'ambient'; } catch (e) { /* desteklenmiyor */ }
+  }
+
+  // Yalnızca dokunuş/tıklama/tuş olayının içinde çağrılmalı
   unlock() {
     try {
       if (!this.ctx) {
         const AC = window.AudioContext || window.webkitAudioContext;
         if (!AC) return;
+        this.applySession();
         this.ctx = new AC();
         this.master = this.ctx.createGain();
         this.master.gain.value = 0.9;
         const comp = this.ctx.createDynamicsCompressor();
         comp.threshold.value = -14; comp.ratio.value = 4;
         this.master.connect(comp).connect(this.ctx.destination);
-        const len = this.ctx.sampleRate * 1.2;
+        const len = Math.floor(this.ctx.sampleRate * 1.2);
         this.noise = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
         const d = this.noise.getChannelData(0);
         for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
       }
-      if (this.ctx.state === 'suspended') this.ctx.resume();
+      if (this.ctx.state !== 'running') this.ctx.resume().catch(() => {});
+      // WebKit: dokunuşun içinde kısa bir sessiz tampon çalmak bağlamı kesin açar
+      const b = this.ctx.createBuffer(1, 1, 22050);
+      const s = this.ctx.createBufferSource();
+      s.buffer = b; s.connect(this.ctx.destination); s.start(0);
+      if (IOS && !navigator.audioSession && this._enabled && !this.silentEl) {
+        const el = document.createElement('audio');
+        el.setAttribute('playsinline', '');
+        el.setAttribute('x-webkit-airplay', 'deny');
+        el.loop = true;
+        el.src = silentWavURL();
+        el.play().catch(() => {});
+        this.silentEl = el;
+      }
     } catch (e) { /* ses yoksa oyun yine çalışır */ }
-    if (!this.unlockedSpeech && 'speechSynthesis' in window) {
+    if (!this.speechReady && 'speechSynthesis' in window) {
       try {
         const u = new SpeechSynthesisUtterance(' ');
         u.volume = 0;
+        u.lang = 'tr-TR';
         speechSynthesis.speak(u);
-        this.unlockedSpeech = true;
+        this.speechReady = true;
         this.pickVoice();
-        if (speechSynthesis.onvoiceschanged !== undefined) speechSynthesis.onvoiceschanged = () => this.pickVoice();
+        speechSynthesis.addEventListener('voiceschanged', () => this.pickVoice());
       } catch (e) { /* yok say */ }
     }
   }
@@ -44,7 +99,7 @@ export class Sound {
     this.trVoice = vs.find((v) => /^tr(-|_|$)/i.test(v.lang)) || null;
   }
 
-  get ok() { return this.enabled && this.ctx && this.ctx.state === 'running'; }
+  get ok() { return this._enabled && this.ctx && this.ctx.state === 'running'; }
   get t() { return this.ctx.currentTime; }
 
   // --- yapı taşları
@@ -85,12 +140,12 @@ export class Sound {
     let t = t0;
     for (let i = 0; i < 9; i++) {
       t += 0.03 + Math.random() * 0.06;
-      this.burst(t, { f: 2600 + Math.random() * 1800, q: 6, gain: 0.25 + Math.random() * 0.2, decay: 0.035 });
+      this.burst(t, { f: 2400 + Math.random() * 1600, q: 2.2, gain: 0.7 + Math.random() * 0.3, decay: 0.04 });
     }
     // tahtaya düşüş: iki tok vuruş
-    for (const [dt, gn] of [[0.08, 0.7], [0.2, 0.45]]) {
-      this.burst(t + dt, { f: 1500, q: 2.5, gain: gn, decay: 0.06 });
-      this.tone(t + dt, { f: 210, f2: 120, gain: 0.35 * gn, decay: 0.08 });
+    for (const [dt, gn] of [[0.08, 1], [0.2, 0.7]]) {
+      this.burst(t + dt, { f: 1500, q: 1.8, gain: gn, decay: 0.07 });
+      this.tone(t + dt, { f: 210, f2: 120, gain: 0.45 * gn, decay: 0.09 });
     }
   }
 
@@ -119,8 +174,8 @@ export class Sound {
   bearOff() {
     if (!this.ok) return;
     const t = this.t;
-    this.burst(t, { f: 1600, q: 2, gain: 0.35, decay: 0.05 });
-    this.tone(t + 0.02, { f: 520, f2: 880, type: 'triangle', gain: 0.12, decay: 0.16 });
+    this.burst(t, { f: 1600, q: 2, gain: 0.6, decay: 0.05 });
+    this.tone(t + 0.02, { f: 520, f2: 880, type: 'triangle', gain: 0.2, decay: 0.16 });
   }
 
   turn() {
@@ -183,14 +238,17 @@ export class Sound {
   }
 
   say(text) {
-    if (!this.enabled || !this.voice || !('speechSynthesis' in window)) return;
+    if (!this._enabled || !this.voice || !this.speechReady || !('speechSynthesis' in window)) return;
     try {
-      speechSynthesis.cancel();
+      const busy = speechSynthesis.speaking || speechSynthesis.pending;
+      if (busy) speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
       u.lang = 'tr-TR';
       if (this.trVoice) u.voice = this.trVoice;
       u.rate = 1.02; u.pitch = 1.0; u.volume = 1;
-      speechSynthesis.speak(u);
+      // Safari: cancel()'dan hemen sonraki speak() bazen yutuluyor
+      if (busy) setTimeout(() => speechSynthesis.speak(u), 80);
+      else speechSynthesis.speak(u);
     } catch (e) { /* yok say */ }
   }
 }
