@@ -87,6 +87,20 @@ export function applyMove(b, c, m) {
   return nb;
 }
 
+// applyMove'un tersi (geri alma animasyonu için)
+export function unapplyMove(b, c, m) {
+  const nb = cloneBoard(b);
+  const s = c === 'w' ? 1 : -1;
+  if (m.to === 'off') nb.off[c]--;
+  else {
+    nb.p[m.to] -= s;
+    if (m.hit) { nb.p[m.to] = -s; nb.bar[other(c)]--; }
+  }
+  if (m.from === 'bar') nb.bar[c]++;
+  else nb.p[m.from] += s;
+  return nb;
+}
+
 // Kendi evinde vurduğun pul o tur kaçamaz (vur-kaç yasağı)
 function nextLocked(c, m, rules, locked) {
   if (!rules || !rules.noHitRun || !m.hit || m.to === 'off' || !isHome(c, m.to)) return locked;

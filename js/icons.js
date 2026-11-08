@@ -18,6 +18,7 @@ export const icon = {
   crown: (s) => svg('<path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"></path><path d="M5 20h14"></path>', s),
   flag: (s) => svg('<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><path d="M4 22v-7"></path>', s),
   phone: (s) => svg('<rect x="2.5" y="6.5" width="19" height="11" rx="2.5"></rect><path d="M18 3.5a3 3 0 0 1 2.5 2.5"></path>', s),
+  expand: (s) => svg('<path d="M4 9V4h5"></path><path d="M20 9V4h-5"></path><path d="M4 15v5h5"></path><path d="M20 15v5h-5"></path>', s),
   eye: (s) => svg('<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle>', s),
   palette: (s) => svg('<circle cx="13.5" cy="6.5" r="1.3" fill="currentColor"></circle><circle cx="17.5" cy="10.5" r="1.3" fill="currentColor"></circle><circle cx="8.5" cy="7.5" r="1.3" fill="currentColor"></circle><circle cx="6.5" cy="12.5" r="1.3" fill="currentColor"></circle><path d="M12 2a10 10 0 1 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1.1.9-2 2-2h2.4A5.6 5.6 0 0 0 22 9.8C22 5.5 17.5 2 12 2z"></path>', s),
   voice: (s) => svg('<path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"></path><path d="M19 11a7 7 0 0 1-14 0"></path><path d="M12 18v3"></path>', s),

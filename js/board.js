@@ -1,9 +1,9 @@
 // Tahta görünümü: statik tahta resmi + pullar, vurgular, dokunma alanları ve animasyonlar.
-import { THEMES, geometry, renderBoard, checkerDefs, checkerMarkup, F } from './theme.js';
+import { THEMES, geometry, renderBoard, checkerDefs, checkerParts, F } from './theme.js';
 
 // PX/PY: tahta resminin gölge payı. VX/VY: ekranda bırakılan pay (dar tutuldu, tahta büyük görünsün;
 // gölge kenardan taşabilir).
-const W = 520, H = 362, PX = 14, PY = 12, VX = 4, VY = 3;
+const W = 520, H = 362, PX = 14, PY = 12, VX = 0, VY = 0;
 export const VIEW_W = W + 2 * VX, VIEW_H = H + 2 * VY;
 const NS = 'http://www.w3.org/2000/svg';
 
@@ -15,6 +15,7 @@ const el = (tag, attrs = {}, html = '') => {
 };
 const pts = (arr) => arr.map((p) => `${F(p[0])},${F(p[1])}`).join(' ');
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const reducedMotion = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
 
 export class BoardView {
   constructor(wrap, { onTap }) {
@@ -29,11 +30,12 @@ export class BoardView {
     this.lHl = el('g', { class: 'l-hl' });
     this.lLast = el('g', { class: 'l-last' });
     this.lOff = el('g', { class: 'l-off' });
+    this.lUnder = el('g', { class: 'l-under' });
     this.lChk = el('g', { class: 'l-chk' });
     this.lSel = el('g', { class: 'l-sel' });
     this.lFx = el('g', { class: 'l-fx' });
     this.lHit = el('g', { class: 'l-hit' });
-    for (const l of [this.defs, this.bg, this.lHl, this.lLast, this.lOff, this.lChk, this.lSel, this.lFx, this.lHit]) this.svg.appendChild(l);
+    for (const l of [this.defs, this.bg, this.lHl, this.lLast, this.lOff, this.lUnder, this.lChk, this.lSel, this.lFx, this.lHit]) this.svg.appendChild(l);
     wrap.appendChild(this.svg);
     this.pool = { w: [], b: [] };
     this.stacks = {};
@@ -78,7 +80,8 @@ export class BoardView {
     for (const c of ['w', 'b']) {
       this.pool[c] = [];
       for (let i = 0; i < 15; i++) {
-        const g = el('g', { class: 'chk', 'data-c': c }, checkerMarkup(T, 'k', c, this.g.r));
+        const parts = checkerParts(T, 'k', c, this.g.r);
+        const g = el('g', { class: 'chk', 'data-c': c }, `<g class="shw">${parts.shadow}</g><g class="ci">${parts.body}</g>`);
         g.style.display = 'none';
         this.lChk.appendChild(g);
         this.pool[c].push(g);
@@ -145,11 +148,15 @@ export class BoardView {
     }
     for (const c of ['w', 'b']) for (let i = used[c]; i < 15; i++) this.pool[c][i].style.display = 'none';
     for (const e of order) this.lChk.appendChild(e);
-    // toplanan pullar
+    this.drawOff(b.off);
+  }
+
+  // toplanan pullar (tepside yatık)
+  drawOff(offs) {
     let off = '';
     const { trayX0, trayX1 } = this.g;
     for (const c of ['w', 'b']) {
-      for (let i = 0; i < b.off[c]; i++) {
+      for (let i = 0; i < offs[c]; i++) {
         const s = this.offSlot(c, i);
         off += `<rect x="${F(trayX0 + 4)}" y="${F(s.y - s.slabH / 2)}" width="${F(trayX1 - trayX0 - 8)}" height="${F(s.slabH - 0.8)}" rx="${F(s.slabH * 0.42)}" fill="url(#k-${c}Slab)" stroke="${this.T[c].rim}" stroke-width="0.5" stroke-opacity="0.8"></rect>`;
       }
@@ -160,7 +167,11 @@ export class BoardView {
   topOf(key) { const s = this.stacks[key]; return s && s.length ? s[s.length - 1] : null; }
 
   // ---------------------------------------------------------- vurgular
-  clearMarks() { this.lHl.innerHTML = ''; this.lSel.innerHTML = ''; }
+  clearMarks() {
+    this.lHl.innerHTML = '';
+    this.lSel.innerHTML = '';
+    for (const c of ['w', 'b']) for (const e of this.pool[c]) e.classList.remove('sel');
+  }
 
   mark({ selected = null, dests = null, movable = null, color = 'w' } = {}) {
     const T = this.T;
@@ -173,9 +184,14 @@ export class BoardView {
         if (e) sel += `<circle cx="${F(e._x)}" cy="${F(e._y)}" r="${F(r + 1.6)}" fill="none" stroke="${T.accent}" stroke-width="1.4" stroke-opacity="0.55" stroke-dasharray="2 3"></circle>`;
       }
     }
+    for (const cc of ['w', 'b']) for (const e of this.pool[cc]) e.classList.remove('sel');
     if (selected != null) {
       const e = selected === 'bar' ? this.topOf('bar' + color) : this.topOf('p' + selected);
-      if (e) sel += `<circle cx="${F(e._x)}" cy="${F(e._y)}" r="${F(r + 3)}" fill="none" stroke="${T.accent}" stroke-width="2.4" filter="url(#glow)"></circle>`;
+      if (e) {
+        sel += `<circle cx="${F(e._x)}" cy="${F(e._y)}" r="${F(r + 3)}" fill="none" stroke="${T.accent}" stroke-width="2.4" filter="url(#glow)"></circle>`;
+        e.classList.add('sel');
+        this.lChk.appendChild(e);
+      }
     }
     if (dests) {
       for (const [to, chain] of dests) {
@@ -226,10 +242,110 @@ export class BoardView {
     return this.slot(a, i, n);
   }
 
-  // m: {from, to, hit}; Gbefore: hamleden önceki durum
+  // Uçuş yolu: kirişin ortasından tahtanın ortasına doğru bükülen yay (pul tahtadan taşmaz)
+  arcCtrl(x0, y0, x1, y1, h, bend) {
+    const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+    const dx = x1 - x0, dy = y1 - y0, L = Math.hypot(dx, dy) || 1;
+    let nx = -dy / L, ny = dx / L;
+    if (bend === 'center') {
+      const tx = W / 2 - mx, ty = this.g.midY - my;
+      if (tx * nx + ty * ny < 0) { nx = -nx; ny = -ny; }
+    } else if (bend === 'ccw') { nx = -nx; ny = -ny; }
+    return { cx: mx + nx * h, cy: my + ny * h };
+  }
+
+  // Örneklenmiş ara kareler: havalanma (büyüme), iniş (ezilip toparlanma) ya da tepsiye yatma
+  arcFrames(x0, y0, x1, y1, { h, lift = 1.22, end = 'land', start = 'flat', bend = 'center' }) {
+    const { cx, cy } = this.arcCtrl(x0, y0, x1, y1, h, bend);
+    const N = 16, kf = [];
+    const T = (x, y, sx, sy = sx) => `translate(${F(x)}px, ${F(y)}px) scale(${sx.toFixed(3)}, ${sy.toFixed(3)})`;
+    for (let i = 0; i <= N; i++) {
+      const t = i / N, u = 1 - t;
+      const x = u * u * x0 + 2 * u * t * cx + t * t * x1;
+      const y = u * u * y0 + 2 * u * t * cy + t * t * y1;
+      const s = 1 + (lift - 1) * Math.sin(Math.PI * t);
+      kf.push({ transform: i === 0 && start === 'slab' ? T(x, y, 1, 0.32) : T(x, y, s), offset: +(t * 0.84).toFixed(4) });
+    }
+    if (end === 'slab') {
+      kf.push({ transform: T(x1, y1, 1.04, 0.5), offset: 0.92 });
+      kf.push({ transform: T(x1, y1, 1, 0.32), offset: 1 });
+    } else {
+      kf.push({ transform: T(x1, y1 + 0.8, 1.1, 0.86), offset: 0.9 });
+      kf.push({ transform: T(x1, y1 - 0.6, 0.96, 1.05), offset: 0.95 });
+      kf.push({ transform: T(x1, y1, 1), offset: 1 });
+    }
+    return kf;
+  }
+
+  // Bir pulu yay çizerek uçur: büyüyerek havalanır, gölgesi ayrılıp açılır, arkasında iz bırakır.
+  // flips: havada takla (kırılan pul için)
+  fly(e, x1, y1, { dur, h, lift = 1.22, trail = true, end = 'land', start = 'flat', flips = 0, bend = 'center' } = {}) {
+    const easing = 'cubic-bezier(.33,.06,.3,1)';
+    if (reducedMotion()) { trail = false; flips = 0; }
+    const kf = this.arcFrames(e._x, e._y, x1, y1, { h, lift, end, start, bend });
+    e.classList.remove('sel');
+    this.lChk.appendChild(e);
+    if (trail) {
+      for (const [k, op] of [[1, 0.32], [2, 0.18], [3, 0.08]]) {
+        const gh = e.cloneNode(true);
+        gh.classList.add('ghost');
+        const gs = gh.querySelector('.shw');
+        if (gs) gs.remove();
+        // iz yalnızca animasyon sürerken görünür; bitince kendiliğinden kaybolur
+        gh.style.opacity = '0';
+        this.lChk.insertBefore(gh, e);
+        const drop = () => gh.remove();
+        gh.animate(kf.map((f) => ({ ...f, opacity: op })), { duration: dur, delay: k * 32, easing, fill: 'backwards' }).finished.then(drop, drop);
+      }
+    }
+    const sh = e.querySelector('.shw');
+    if (sh) {
+      sh.animate([
+        { transform: 'translate(0px, 0px) scale(1)', opacity: 1 },
+        { transform: 'translate(6px, 11px) scale(1.25)', opacity: 0.35, offset: 0.42 },
+        { transform: 'translate(0px, 0px) scale(1)', opacity: 1, offset: 0.84 },
+        { transform: 'translate(0px, 0px) scale(1)', opacity: 1 },
+      ], { duration: dur, easing });
+    }
+    if (flips) {
+      const ci = e.querySelector('.ci');
+      const n = flips * 8, fk = [];
+      for (let i = 0; i <= n; i++) fk.push({ transform: `scale(${Math.cos((2 * Math.PI * flips * i) / n).toFixed(3)}, 1)`, offset: +((i / n) * 0.84).toFixed(4) });
+      fk.push({ transform: 'scale(1, 1)', offset: 1 });
+      if (ci) ci.animate(fk, { duration: dur, easing });
+    }
+    // son konum önce yazılır; animasyon bitince sıçrama olmaz
+    if (end === 'slab') { e.style.transform = `translate(${F(x1)}px, ${F(y1)}px) scale(1, 0.32)`; e._x = x1; e._y = y1; }
+    else this.setPos(e, x1, y1);
+    return e.animate(kf, { duration: dur, easing }).finished.catch(() => {});
+  }
+
+  // Yere inişte tahtada yayılan halka ve toz
+  ripple(x, y, color, big = false) {
+    if (!this.T) return;
+    const r = this.g.r;
+    const g = el('g', { class: 'ripple', transform: `translate(${F(x)} ${F(y)})` });
+    const ring = el('circle', { r: F(r * 1.02), fill: 'none', stroke: color, 'stroke-width': big ? '2.2' : '1.6' });
+    g.appendChild(ring);
+    this.lUnder.appendChild(g);
+    ring.animate([{ transform: 'scale(0.85)', opacity: 0.95 }, { transform: `scale(${big ? 2.1 : 1.75})`, opacity: 0 }], { duration: big ? 620 : 520, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' });
+    const n = big ? 11 : 7;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + Math.random() * 0.6;
+      const dot = el('circle', { r: F(0.7 + Math.random() * 1.1), fill: big ? color : '#efcf9a', 'fill-opacity': '0.9' });
+      g.appendChild(dot);
+      const d0 = r * 0.9, d = r * (1.25 + Math.random() * (big ? 1.1 : 0.7));
+      dot.animate([
+        { transform: `translate(${F(Math.cos(a) * d0)}px, ${F(Math.sin(a) * d0)}px)`, opacity: 1 },
+        { transform: `translate(${F(Math.cos(a) * d)}px, ${F(Math.sin(a) * d)}px)`, opacity: 0 },
+      ], { duration: 380 + Math.random() * 240, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'forwards' });
+    }
+    setTimeout(() => g.remove(), 800);
+  }
+
+  // m: {from, to, hit}; before: hamleden önceki durum
   async animateMove(m, c, before, { onLand, onHit } = {}) {
-    const fromKey = m.from === 'bar' ? 'bar' + c : 'p' + m.from;
-    const e = this.topOf(fromKey);
+    const e = this.topOf(m.from === 'bar' ? 'bar' + c : 'p' + m.from);
     if (!e) return;
     const b = before.board;
     let dest;
@@ -237,39 +353,79 @@ export class BoardView {
     else {
       const cnt = Math.abs(b.p[m.to]);
       const own = cnt && (b.p[m.to] > 0) === (c === 'w');
-      const idx = own ? cnt : 0;
-      dest = this.slot(m.to, idx, own ? cnt + 1 : 1);
+      dest = this.slot(m.to, own ? cnt : 0, own ? cnt + 1 : 1);
     }
-    const x0 = e._x, y0 = e._y;
-    const dist = Math.hypot(dest.x - x0, dest.y - y0);
-    const dur = Math.min(520, 230 + dist * 0.75);
-    const mx = (x0 + dest.x) / 2, my = (y0 + dest.y) / 2 - Math.min(46, 12 + dist * 0.16);
-    this.lChk.appendChild(e);
-    let hitDone = Promise.resolve();
+    const dist = Math.hypot(dest.x - e._x, dest.y - e._y);
+    const dur = Math.round(Math.min(800, 400 + dist * 0.9));
+    const h = Math.min(70, 16 + dist * 0.24);
     const victim = m.hit ? this.topOf('p' + m.to) : null;
-    this.setPos(e, dest.x, dest.y); // son konum önce yazılır, animasyon bitince sıçrama olmaz
-    const anim = e.animate([
-      { transform: `translate(${F(x0)}px, ${F(y0)}px) scale(1)` },
-      { transform: `translate(${F(mx)}px, ${F(my)}px) scale(1.12)`, offset: 0.5 },
-      { transform: `translate(${F(dest.x)}px, ${F(dest.y)}px) scale(1)` },
-    ], { duration: dur, easing: 'cubic-bezier(.33,.66,.36,1)' });
+    let hitDone = Promise.resolve();
     if (victim) {
-      hitDone = wait(dur * 0.82).then(() => {
+      hitDone = wait(dur * 0.84).then(() => {
         onHit && onHit(dest.x, dest.y);
-        const bs = this.barSlot(c === 'w' ? 'b' : 'w', b.bar[c === 'w' ? 'b' : 'w']);
-        this.lChk.appendChild(victim);
-        const vx = victim._x, vy = victim._y;
-        this.setPos(victim, bs.x, bs.y);
-        return victim.animate([
-          { transform: `translate(${F(vx)}px, ${F(vy)}px) rotate(0deg) scale(1)` },
-          { transform: `translate(${F((vx + bs.x) / 2 + 6)}px, ${F(Math.min(vy, bs.y) - 30)}px) rotate(160deg) scale(1.15)`, offset: 0.45 },
-          { transform: `translate(${F(bs.x)}px, ${F(bs.y)}px) rotate(360deg) scale(1)` },
-        ], { duration: 520, easing: 'cubic-bezier(.3,.6,.3,1)' }).finished;
+        const opp = c === 'w' ? 'b' : 'w';
+        const bs = this.barSlot(opp, b.bar[opp]);
+        return this.fly(victim, bs.x, bs.y, { dur: 700, h: 64, lift: 1.34, flips: 2 }).then(() => this.ripple(bs.x, bs.y, this.T.danger, true));
       });
     }
-    await anim.finished;
-    onLand && onLand(m.to === 'off');
+    const landed = wait(dur * 0.86).then(() => {
+      this.ripple(dest.x, dest.y, m.to === 'off' ? this.T.accent : this.T.accentSoft, m.to === 'off');
+      onLand && onLand(m.to === 'off');
+    });
+    await this.fly(e, dest.x, dest.y, { dur, h, end: m.to === 'off' ? 'slab' : 'land' });
+    await landed;
     await hitDone;
+  }
+
+  // Geri alınan hamle: pul geldiği yere döner, kırılan pul yerine oturur
+  async animateUndo(m, c, before, { onLand } = {}) {
+    let e;
+    if (m.to === 'off') {
+      // tepsideki son pul kalkıp geri döner
+      e = this.pool[c].find((x) => x.style.display === 'none');
+      if (!e || !before.off[c]) return;
+      const s = this.offSlot(c, before.off[c] - 1);
+      this.drawOff({ ...before.off, [c]: before.off[c] - 1 });
+      e.style.display = '';
+      e.style.transform = `translate(${F(s.x)}px, ${F(s.y)}px) scale(1, 0.32)`;
+      e._x = s.x; e._y = s.y;
+    } else e = this.topOf('p' + m.to);
+    if (!e) return;
+    let dest;
+    if (m.from === 'bar') dest = this.barSlot(c, before.bar[c]);
+    else { const cnt = Math.abs(before.p[m.from]); dest = this.slot(m.from, cnt, cnt + 1); }
+    const victim = m.hit ? this.topOf('bar' + (c === 'w' ? 'b' : 'w')) : null;
+    const dist = Math.hypot(dest.x - e._x, dest.y - e._y);
+    const jobs = [this.fly(e, dest.x, dest.y, { dur: Math.round(Math.min(640, 340 + dist * 0.7)), h: Math.min(50, 12 + dist * 0.2), lift: 1.16, trail: false, start: m.to === 'off' ? 'slab' : 'flat' })];
+    if (victim) {
+      const s0 = this.slot(m.to, 0, 1);
+      jobs.push(this.fly(victim, s0.x, s0.y, { dur: 600, h: 48, lift: 1.22, trail: false, flips: 1 }));
+    }
+    await Promise.all(jobs);
+    this.ripple(dest.x, dest.y, this.T.accentSoft);
+    onLand && onLand();
+  }
+
+  // Yeni el: pullar tahtanın ortasından savrularak yerlerine konar
+  async dealIn(onTick) {
+    if (!this.T || reducedMotion()) return;
+    const cx = (this.g.barX0 + this.g.barX1) / 2, cy = this.g.midY;
+    const els = [], tops = new Set();
+    for (let a = 1; a <= 24; a++) {
+      const st = this.stacks['p' + a];
+      if (st && st.length) { els.push(...st); tops.add(st[st.length - 1]); }
+    }
+    for (const e of els) e.classList.remove('sel');
+    const jobs = els.map((e, i) => {
+      const kf = this.arcFrames(cx, cy, e._x, e._y, { h: 46, lift: 1.3, bend: 'cw' });
+      kf.forEach((k) => { k.opacity = Math.min(1, k.offset / 0.14); });
+      kf[0].transform = `translate(${F(cx)}px, ${F(cy)}px) scale(0.3, 0.3)`;
+      const delay = i * 20;
+      if (onTick && i % 4 === 0) setTimeout(onTick, delay + 440);
+      const drop = tops.has(e) ? setTimeout(() => this.ripple(e._x, e._y, this.T.accentSoft), delay + 440) : 0;
+      return e.animate(kf, { duration: 520, delay, easing: 'cubic-bezier(.3,.1,.3,1)', fill: 'backwards' }).finished.catch(() => clearTimeout(drop));
+    });
+    await Promise.all(jobs);
   }
 
   // vuruş efekti

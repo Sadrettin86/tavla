@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {
   initialBoard, legalMoves, destinations, applyMove, RULESETS, newGameState, rollOpening, roll, move, undo, endTurn,
-  currentLegal, canEndTurn, pipCount, nextGame, sit,
+  currentLegal, canEndTurn, pipCount, nextGame, sit, unapplyMove,
 } from '../js/rules.js';
 
 const TR = RULESETS.tr, FREE = RULESETS.free;
@@ -175,7 +175,10 @@ t('rastgele 300 oyun sonuna kadar kuralları bozmadan oynanır', () => {
       if (G.phase === 'roll') { G = roll(G, G.turn, die(), die()); continue; }
       const lm = currentLegal(G);
       if (!lm.length) { G = endTurn(G, G.turn); continue; }
-      G = move(G, G.turn, lm[Math.floor(rnd() * lm.length)]);
+      const pick = lm[Math.floor(rnd() * lm.length)];
+      const b0 = G.board, c0 = G.turn;
+      G = move(G, G.turn, pick);
+      assert.deepEqual(unapplyMove(G.board, c0, G.moves[G.moves.length - 1]), b0);
       const tot = (c) => { let s = G.board.bar[c] + G.board.off[c]; for (let a = 1; a <= 24; a++) s += c === 'w' ? Math.max(0, G.board.p[a]) : Math.max(0, -G.board.p[a]); return s; };
       assert.equal(tot('w'), 15); assert.equal(tot('b'), 15);
     }

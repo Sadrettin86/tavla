@@ -10,9 +10,16 @@ Arkadaşınla online tavla. Oda kurarsın, linki WhatsApp'tan gönderirsin, link
 - Efektler: çift gelince büyük yazı (DÜŞEŞ!, DUBARA!…), pul kırınca vuruş, mars damgası, konfeti
 - Sesler kodla üretilir, ses dosyası yok. Zar adları telefonun Türkçe sesiyle okunur (Şeşbeş, Düşeş…)
 - Laf atma butonları ve tepkiler (çay, alev, kahkaha…)
+- Pullar yay çizerek uçar, iz bırakır, yere oturur; kırılan pul havada takla atar; geri alınan hamle geri uçar; yeni elde pullar tahtaya dağıtılır
 - Aynı telefonda iki kişi oynama
 - Odaya üçüncü biri girerse izleyici olur
 - Telefon kilitlenip açılınca ya da sayfa yenilenince oyun kaldığı yerden devam eder
+
+## Telefonda tam ekran
+
+- **iPhone:** Safari ya da Chrome'da paylaş menüsünden **Ana Ekrana Ekle**'yi seç, Tavla'yı ana ekrandaki simgeden aç. Tarayıcı çubukları olmadan açılır, tahta ekranın iki yanına değer. (iPhone tarayıcıları sayfalara tam ekran izni vermiyor, tek yol bu.)
+- **Android:** Oyuna girince kendiliğinden tam ekran olur. Menüdeki **Tam ekran** satırından açıp kapatabilirsin.
+- Ana ekrandan açılan uygulamada arkadaşının linkine dokunamıyorsan giriş ekranındaki **Oda kodu** kutusuna kodu yazıp katıl. Kod, bekleme ekranında ve paylaşılan mesajda yazar.
 
 ## Kurallar (Türk tavlası)
 
@@ -66,6 +73,7 @@ node tests/rules.test.mjs
 | `js/fx.js` | Büyük yazılar, konfeti, mars damgası, baloncuklar |
 | `js/sound.js` | Sesler (Web Audio) ve Türkçe zar anonsu |
 | `js/net.js` | Oda bağlantısı: Firebase, yerel test, aynı telefonda |
+| `js/fullscreen.js` | Tam ekran (Android) ve iPhone'da ana ekrana ekleme tarifi |
 | `js/firebase-config.js` | Firebase ayarı |
 | `database.rules.json` | Firebase güvenlik kuralları |
 

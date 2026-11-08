@@ -3,6 +3,7 @@ import { BoardView } from './board.js';
 import { DiceView } from './dice.js';
 import { Sound } from './sound.js';
 import * as FX from './fx.js';
+import * as FS from './fullscreen.js';
 import { icon, logoDice } from './icons.js';
 import { diceName, upperTR, PHRASES, REACTIONS } from './names.js';
 import { connectRoom, OfflineRoom, newRoomId, validRoomId, onlineAvailable, testMode } from './net.js';
@@ -86,6 +87,21 @@ class App {
       $('#btnCreate').disabled = true;
     }
     this.paintLobby();
+    if (FS.IOS && !FS.standalone() && !store.get('ipucu')) {
+      $('#installTipText').textContent = FS.installSteps();
+      $('#installTip').hidden = false;
+    }
+    $('#btnTipClose').addEventListener('click', () => { $('#installTip').hidden = true; store.set('ipucu', 1); });
+    const code = $('#codeIn');
+    code.addEventListener('input', () => { code.value = code.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); });
+    $('#codeForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const id = code.value.trim().toUpperCase();
+      if (!validRoomId(id)) { this.globalToast('Oda kodu 6 karakter olmalı'); code.focus(); return; }
+      code.value = '';
+      code.blur();
+      location.hash = id;
+    });
 
     // katıl
     $('#btnJoin').addEventListener('click', () => this.joinRoom(this.joinId));
@@ -127,6 +143,7 @@ class App {
       this.paintMenu();
       if (this.settings.voice) this.sound.say('Şeşbeş');
     });
+    $('#mFull').addEventListener('click', () => this.toggleFullscreen());
     this.buildSwatches($('#mTheme'), (k) => this.changeTheme(k));
     $('#mLink').addEventListener('click', () => { this.copyLink(); $('#menu').hidden = true; });
     $('#mResign').addEventListener('click', () => this.resign());
@@ -143,6 +160,15 @@ class App {
     // ses kilidini ilk dokunuşta aç
     // iPhone'da ses yalnızca gerçek dokunuşla açılır (pointerdown sayılmaz)
     for (const ev of ['touchend', 'click', 'keydown']) document.addEventListener(ev, () => this.sound.unlock(), { capture: true, passive: true });
+    // telefonda oyun ekranında tam ekrana geç (Android vb.; iPhone'da ana ekran uygulaması gerekir)
+    this.fsWanted = FS.supported() && FS.touch();
+    document.addEventListener('click', () => this.maybeFullscreen(), { capture: true, passive: true });
+    FS.onChange(() => {
+      // kullanıcı kendisi çıktıysa bir daha zorlama (arka plana geçince çıkılması sayılmaz)
+      if (!FS.active() && document.visibilityState === 'visible' && !this.fsLeaving) this.fsWanted = false;
+      this.fsLeaving = false;
+      if (!$('#menu').hidden) this.paintMenu();
+    });
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && document.body.dataset.screen === 'game') this.keepAwake();
       this.updateTitle();
@@ -334,7 +360,7 @@ class App {
   async shareLink() {
     this.sound.unlock();
     if (navigator.share) {
-      try { await navigator.share({ title: 'Tavla', text: 'Tavla oynayalım mı? Linke tıkla, karşıma otur.', url: this.link() }); return; }
+      try { await navigator.share({ title: 'Tavla', text: `Tavla oynayalım mı? Linke tıkla, karşıma otur. (Oda kodu: ${this.roomId})`, url: this.link() }); return; }
       catch (e) { if (e && e.name === 'AbortError') return; }
     }
     this.copyLink();
@@ -376,7 +402,27 @@ class App {
   enterGame() {
     this.show('game');
     this.keepAwake();
+    this.maybeFullscreen();
     this.snap();
+    // yeni oyun: pullar tahtaya dağıtılır
+    const G = this.G;
+    if (G && G.phase === 'opening' && !G.opening.w && !G.opening.b) this.enqueue(() => this.board.dealIn(() => this.sound.place()));
+  }
+
+  maybeFullscreen() {
+    if (this.fsWanted && document.body.dataset.screen === 'game' && !FS.active()) FS.enter();
+  }
+
+  async toggleFullscreen() {
+    if (FS.supported()) {
+      if (FS.active()) { this.fsWanted = false; this.fsLeaving = true; await FS.exit(); }
+      else { this.fsWanted = true; await FS.enter(); }
+      this.paintMenu();
+      return;
+    }
+    const tip = $('#mFullTip');
+    tip.textContent = FS.installSteps();
+    tip.hidden = !tip.hidden;
   }
 
   async keepAwake() {
@@ -436,7 +482,10 @@ class App {
     for (const a of acts) {
       const before = board;
       if (a.t === 'move') board = Rules.applyMove(board, a.by, a.m);
-      this.enqueue(() => this.playAction(a, before, board));
+      else if (a.t === 'undo') board = Rules.unapplyMove(board, a.by, a.m);
+      else if (a.t === 'newgame' || a.t === 'rematch') board = Rules.initialBoard();
+      const after = board;
+      this.enqueue(() => this.playAction(a, before, after));
     }
     this.enqueue(() => this.snap(seq));
   }
@@ -748,7 +797,9 @@ class App {
         this.board.render({ ...G, board: after });
         break;
       case 'undo':
-        this.sound.place();
+        this.board.clearMarks();
+        await this.board.animateUndo(a.m, a.by, before, { onLand: () => this.sound.place() });
+        this.board.render({ ...G, board: after });
         break;
       case 'end':
         if (a.pass) FX.toast(stage, `${this.nameOf(a.by)} oynayamadı`);
@@ -762,14 +813,18 @@ class App {
         await this.celebrate(a);
         break;
       case 'newgame':
-        this.openShown = { w: 0, b: 0 };
-        FX.toast(stage, `${a.game}. el başlıyor`);
-        this.sound.join();
-        break;
       case 'rematch':
         this.openShown = { w: 0, b: 0 };
-        FX.toast(stage, 'Rövanş başlıyor');
+        this.renderResult();
+        this.board.clearMarks();
+        this.board.markLast(null);
+        this.dice.clear();
+        this.board.render({ ...G, board: after });
+        this.renderRails();
+        this.renderButtons();
+        FX.toast(stage, a.t === 'rematch' ? 'Rövanş başlıyor' : `${a.game}. el başlıyor`);
         this.sound.join();
+        await this.board.dealIn(() => this.sound.place());
         break;
       default:
         break;
@@ -895,6 +950,7 @@ class App {
 
   // ============================================================ menü, ayarlar
   openMenu() {
+    $('#mFullTip').hidden = true;
     this.paintMenu();
     $('#mLink').hidden = this.mode !== 'online';
     $('#mResign').hidden = this.spectator();
@@ -903,6 +959,8 @@ class App {
 
   paintMenu() {
     $('#mSoundVal').textContent = this.settings.sound ? 'Açık' : 'Kapalı';
+    $('#mFull').hidden = FS.standalone() || (!FS.supported() && !FS.IOS);
+    $('#mFullVal').textContent = FS.supported() ? (FS.active() ? 'Açık' : 'Kapalı') : 'Nasıl?';
     $('#mVoiceVal').textContent = this.settings.voice ? 'Açık' : 'Kapalı';
     const cur = this.G ? this.G.theme : this.settings.theme;
     document.querySelectorAll('#mTheme button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.theme === cur)));

@@ -31,6 +31,11 @@
       <div class="hero-board" id="heroBoard" aria-hidden="true"></div>
     </div>
     <div class="col-b">
+      <div class="install-tip" id="installTip" hidden>
+        <span class="ic" data-icon="expand"></span>
+        <p><b>Tam ekran oyna</b><span id="installTipText"></span></p>
+        <button type="button" class="icon-btn bare tip-x" id="btnTipClose" aria-label="Kapat"><span class="ic" data-icon="close"></span></button>
+      </div>
       <div class="field">
         <label for="name">Adın</label>
         <input id="name" type="text" maxlength="16" autocomplete="nickname" placeholder="Adını yaz" enterkeyhint="done">
@@ -54,6 +59,10 @@
         <button type="button" class="btn" id="btnLocal">Aynı telefonda</button>
         <button type="button" class="btn ghost" id="btnBot" disabled>Bota karşı <span class="tag">Yakında</span></button>
       </div>
+      <form class="code-join" id="codeForm" autocomplete="off">
+        <input id="codeIn" type="text" maxlength="6" placeholder="Oda kodu" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="go" aria-label="Oda kodu">
+        <button type="submit" class="btn">Koda katıl</button>
+      </form>
       <p class="foot">Türk tavlası kurallarıyla: mars 2 sayı, açılışta büyük atan zarı yeniden atar.</p>
     </div>
   </div>
@@ -152,6 +161,8 @@
       <div class="panel-head"><h3>Menü</h3><button type="button" class="icon-btn bare" id="btnMenuClose" aria-label="Kapat"><span class="ic" data-icon="close"></span></button></div>
       <button type="button" class="menu-row" id="mSound"><span class="ic" data-icon="sound"></span><span>Ses efektleri</span><b id="mSoundVal">Açık</b></button>
       <button type="button" class="menu-row" id="mVoice"><span class="ic" data-icon="voice"></span><span>Zar anonsu</span><b id="mVoiceVal">Açık</b></button>
+      <button type="button" class="menu-row" id="mFull"><span class="ic" data-icon="expand"></span><span>Tam ekran</span><b id="mFullVal">Kapalı</b></button>
+      <p class="menu-tip" id="mFullTip" hidden></p>
       <div class="menu-row static"><span class="ic" data-icon="palette"></span><span>Tahta</span></div>
       <div class="swatches" id="mTheme"></div>
       <button type="button" class="menu-row" id="mLink"><span class="ic" data-icon="link"></span><span>Oda linkini kopyala</span></button>

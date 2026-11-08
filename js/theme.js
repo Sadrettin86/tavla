@@ -549,3 +549,10 @@ export function checkerMarkup(T, id, c, r) {
   s += `<ellipse cx="${F(-r * 0.3)}" cy="${F(-r * 0.38)}" rx="${F(r * 0.5)}" ry="${F(r * 0.28)}" fill="url(#${id}-spec)" fill-opacity="${c === 'w' ? 0.9 : 0.55}" transform="rotate(-30 ${F(-r * 0.3)} ${F(-r * 0.38)})"></ellipse>`;
   return s;
 }
+
+// Pulu gölge ve gövde olarak ayır (havalanınca gölge ayrı hareket etsin)
+export function checkerParts(T, id, c, r) {
+  const full = checkerMarkup(T, id, c, r);
+  const i = full.indexOf('</ellipse>') + '</ellipse>'.length;
+  return { shadow: full.slice(0, i), body: full.slice(i) };
+}
