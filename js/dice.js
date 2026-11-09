@@ -1,4 +1,5 @@
-// 3B zarlar (CSS). Tahtanın üstündeki katmanda durur.
+// Zarlar (CSS 3B küp). Havada her yönde döner, durunca düz oturur: yalnızca atılan yüz görünür.
+// Tahtanın üstündeki katmanda durur.
 const PIPS = {
   1: [[50, 50]],
   2: [[27, 27], [73, 73]],
@@ -9,7 +10,8 @@ const PIPS = {
 };
 const OPP = { 1: 6, 2: 5, 3: 4, 4: 3, 5: 2, 6: 1 };
 const SIDES = { 1: [2, 3], 2: [3, 1], 3: [1, 2], 4: [5, 1], 5: [1, 3], 6: [2, 4] };
-const FINAL = [[-16, -22, -9], [-14, -27, 11]];
+// Duruş: üst yüz tam karşıya bakar, yan yüzler görünmez. Hafif açı doğal dursun diye.
+const FINAL = [[0, 0, -9], [0, 0, 11]];
 
 function face(v, tf) {
   const pips = PIPS[v].map(([x, y]) => `<span class="pip" style="left:${x}%;top:${y}%"></span>`).join('');

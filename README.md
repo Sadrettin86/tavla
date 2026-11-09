@@ -6,7 +6,7 @@ Arkadaşınla online tavla. Oda kurarsın, linki WhatsApp'tan gönderirsin, link
 
 ## Neler var
 
-- Ahşap tahta (Ceviz, Sedefli, Gece temaları) ve 3D zarlar
+- Ahşap tahta (Ceviz, Sedefli, Gece temaları); zarlar havada döner, düz oturur
 - Efektler: çift gelince büyük yazı (DÜŞEŞ!, DUBARA!…), pul kırınca vuruş, mars damgası, konfeti
 - Sesler kodla üretilir, ses dosyası yok. Zar adları telefonun Türkçe sesiyle okunur (Şeşbeş, Düşeş…)
 - Laf atma butonları ve tepkiler (çay, alev, kahkaha…)
@@ -69,7 +69,7 @@ node tests/rules.test.mjs
 | `index.html`, `css/style.css` | Ekranlar ve yerleşim (telefon yatay/dikey, bilgisayar) |
 | `js/rules.js` | Kural motoru: yasal hamleler, kırma, toplama, mars, sayı |
 | `js/theme.js`, `js/board.js` | Tahta çizimi, pullar, vurgular, animasyonlar |
-| `js/dice.js` | 3D zarlar |
+| `js/dice.js` | Zarlar: havada dönen, düz oturan küpler |
 | `js/fx.js` | Büyük yazılar, konfeti, mars damgası, baloncuklar |
 | `js/sound.js` | Sesler (Web Audio) ve Türkçe zar anonsu |
 | `js/net.js` | Oda bağlantısı: Firebase, yerel test, aynı telefonda |
