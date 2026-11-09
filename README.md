@@ -21,14 +21,14 @@ Arkadaşınla online tavla. Oda kurarsın, linki WhatsApp'tan gönderirsin, link
 - **Android:** Oyuna girince kendiliğinden tam ekran olur. Menüdeki **Tam ekran** satırından açıp kapatabilirsin.
 - Ana ekrandan açılan uygulamada arkadaşının linkine dokunamıyorsan giriş ekranındaki **Oda kodu** kutusuna kodu yazıp katıl. Kod, bekleme ekranında ve paylaşılan mesajda yazar.
 
-## Kurallar (Türk tavlası)
+## Kurallar (Türk usulü, katı kurallar olmadan)
 
 - Katlama küpü yok. Normal galibiyet 1 sayı, mars 2 sayı.
 - Açılışta herkes bir zar atar, büyük atan zarları yeniden atarak başlar. Eşit gelirse yeniden atılır.
 - Sonraki eli, önceki eli kazanan başlar.
 - İki zar da oynanabiliyorsa ikisi de oynanır; yalnızca biri oynanabiliyorsa büyük olan oynanır.
-- Kendi evinde vurduğun pulla o el kaçamazsın (vur-kaç yok).
-- Toplarken, zarla toplanabilecek pul varsa o zarla içeride oynanmaz.
+- Vur-kaç yasağı yok: vurduğun pulla aynı el oynamaya devam edebilirsin.
+- Toplarken istersen zarı içeride de oynayabilirsin.
 
 ## Kurulum
 

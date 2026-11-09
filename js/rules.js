@@ -6,8 +6,10 @@
 
 export const other = (c) => (c === 'w' ? 'b' : 'w');
 
+// Türk usulü: açılışta büyük atan zarı yeniden atar, yeni eli kazanan başlar, mars 2 sayı.
+// Katı kurallar kapalı: vur-kaç yasağı (noHitRun) ve toplarken içeride oynama yasağı (noWaste) yok.
 export const RULESETS = {
-  tr: { key: 'tr', name: 'Türk tavlası', openingReroll: true, winnerStarts: true, noHitRun: true, noWaste: true },
+  tr: { key: 'tr', name: 'Türk tavlası', openingReroll: true, winnerStarts: true, noHitRun: false, noWaste: false },
   free: { key: 'free', name: 'Serbest', openingReroll: false, winnerStarts: false, noHitRun: false, noWaste: false },
 };
 
@@ -69,7 +71,7 @@ export function movesForDie(b, c, d, rules, locked) {
       }
     }
   }
-  // Türk kuralı: toplanabilecek pul varken o zarla içeride oynanmaz
+  // Katı kural (açıksa): toplanabilecek pul varken o zarla içeride oynanmaz
   if (rules && rules.noWaste && bearOff.length) return bearOff;
   return normal.concat(bearOff);
 }
@@ -101,7 +103,7 @@ export function unapplyMove(b, c, m) {
   return nb;
 }
 
-// Kendi evinde vurduğun pul o tur kaçamaz (vur-kaç yasağı)
+// Katı kural (açıksa): kendi evinde vurduğun pul o tur kaçamaz (vur-kaç yasağı)
 function nextLocked(c, m, rules, locked) {
   if (!rules || !rules.noHitRun || !m.hit || m.to === 'off' || !isHome(c, m.to)) return locked;
   return (locked || []).concat([m.to]);

@@ -5,6 +5,7 @@ import {
 } from '../js/rules.js';
 
 const TR = RULESETS.tr, FREE = RULESETS.free;
+const STRICT = { ...TR, noHitRun: true, noWaste: true }; // eski katı kurallar (motor hâlâ destekliyor)
 let n = 0;
 const t = (name, fn) => { fn(); n++; console.log('ok -', name); };
 const empty = () => ({ p: new Array(25).fill(0), bar: { w: 0, b: 0 }, off: { w: 0, b: 0 } });
@@ -103,25 +104,32 @@ t('toplama: tam zar, fazla zar, dışarıda pul varken toplanmaz', () => {
   assert.ok(first.every((k) => !k.startsWith('3>off')) || first.some((k) => k.startsWith('7>')), '7 eve girmeden 3 toplanamaz');
 });
 
-t('Türk kuralı: toplanabilecek pul varken o zarla içeride oynanmaz', () => {
+t('toplarken zar içeride de oynanabilir (katı kural kapalı)', () => {
   const b = empty();
   b.p[6] = 1; b.p[2] = 1; b.off.w = 13; b.p[24] = -15;
-  // zar 2: serbestte 6->4 de olur, Türk kuralında 2'den toplamak zorunlu
-  const tr = legalMoves(b, 'w', [2, 2, 2, 2], TR, []).map(key);
-  assert.deepEqual(tr, ['2>off/2']);
-  const fr = legalMoves(b, 'w', [2, 2, 2, 2], FREE, []).map(key).sort();
-  assert.ok(fr.includes('6>4/2') && fr.includes('2>off/2'));
+  // zar 2: hem 2'den toplamak hem 6->4 oynamak serbest
+  const tr = legalMoves(b, 'w', [2, 2, 2, 2], TR, []).map(key).sort();
+  assert.ok(tr.includes('6>4/2') && tr.includes('2>off/2'));
+  // eski katı kuralda yalnızca toplamak zorunluydu
+  assert.deepEqual(legalMoves(b, 'w', [2, 2, 2, 2], STRICT, []).map(key), ['2>off/2']);
 });
 
-t('Türk kuralı: evde vurulan pulla kaçılmaz', () => {
-  // Beyaz 8'de 1 pul, 4'te siyah tek pul. Zar 4-3: 8->4 vur, sonra 4->1 kaçmak yasak.
+t('evde vuran pul aynı el oynamaya devam edebilir (vur-kaç yasağı yok)', () => {
+  // Beyaz 8'de 1 pul, 4'te siyah tek pul. Zar 4-3: 8->4 vur, sonra 4->1.
   const b = empty();
   b.p[8] = 1; b.p[13] = 14; b.p[4] = -1; b.p[5] = -2; b.p[20] = -12; // 5 kapalı: 1'e tek yol 4'te vurmak
   const trDest = destinations(b, 'w', [4, 3], TR, [], 8);
   assert.ok(trDest.has(4));
-  assert.ok(!trDest.has(1), 'vurup kaçma Türk kuralında yok');
-  const frDest = destinations(b, 'w', [4, 3], FREE, [], 8);
-  assert.ok(frDest.has(1), 'serbest kuralda 8->4*->1 olur');
+  assert.ok(trDest.has(1), '8->4*->1 oynanabilir');
+  // oyun akışında da: vurduktan sonra aynı pul devam eder
+  let G = newGameState({ rules: 'tr' });
+  G.board = b; G.phase = 'move'; G.turn = 'w'; G.dice = [4, 3]; G.rem = [4, 3]; G.start = b; G.moves = []; G.locked = [];
+  G = move(G, 'w', { from: 8, to: 4, die: 4 });
+  assert.ok(G && G.board.bar.b === 1);
+  G = move(G, 'w', { from: 4, to: 1, die: 3 });
+  assert.ok(G && G.board.p[1] === 1, 'vuran pul kaçabildi');
+  // eski katı kuralda yasaktı
+  assert.ok(!destinations(b, 'w', [4, 3], STRICT, [], 8).has(1));
 });
 
 t('geri al tahtayı ve zarları geri getirir', () => {
