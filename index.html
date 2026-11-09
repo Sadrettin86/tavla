@@ -26,7 +26,7 @@
     <div class="col-a">
       <header class="brand">
         <div class="brand-row"><span id="logo"></span><h1>Tavla</h1></div>
-        <p class="tagline">Arkadaşınla online, bir linkle.</p>
+        <p class="tagline">Oyun kur ya da açık bir oyuna katıl.</p>
       </header>
       <div class="hero-board" id="heroBoard" aria-hidden="true"></div>
     </div>
@@ -40,6 +40,12 @@
         <label for="name">Adın</label>
         <input id="name" type="text" maxlength="16" autocomplete="nickname" placeholder="Adını yaz" enterkeyhint="done">
       </div>
+      <section class="games" id="games" aria-labelledby="lblGames" hidden>
+        <div class="games-head"><h2 class="label" id="lblGames">Açık oyunlar</h2><span class="live"><i></i>canlı</span></div>
+        <ul class="game-list" id="gameList"></ul>
+        <p class="games-empty" id="gamesEmpty">Oyunlar yükleniyor…</p>
+      </section>
+      <div class="new-game-head"><span class="label">Yeni oyun</span></div>
       <div class="field">
         <span class="label" id="lblTo">Maç kaç sayıya?</span>
         <div class="seg" role="group" aria-labelledby="lblTo" id="segTo">
@@ -54,15 +60,11 @@
         <div class="swatches" role="group" aria-labelledby="lblTheme" id="segTheme"></div>
       </div>
       <p class="notice" id="fbNotice" hidden></p>
-      <button type="button" class="btn primary big" id="btnCreate"><span class="ic" data-icon="link"></span>Oda kur</button>
+      <button type="button" class="btn primary big" id="btnCreate"><span class="ic" data-icon="dice"></span>Oyun kur</button>
       <div class="row2">
         <button type="button" class="btn" id="btnLocal">Aynı telefonda</button>
         <button type="button" class="btn ghost" id="btnBot" disabled>Bota karşı <span class="tag">Yakında</span></button>
       </div>
-      <form class="code-join" id="codeForm" autocomplete="off">
-        <input id="codeIn" type="text" maxlength="6" placeholder="Oda kodu" autocapitalize="characters" autocorrect="off" spellcheck="false" enterkeyhint="go" aria-label="Oda kodu">
-        <button type="submit" class="btn">Koda katıl</button>
-      </form>
       <p class="foot">Türk tavlası kurallarıyla: mars 2 sayı, açılışta büyük atan zarı yeniden atar.</p>
     </div>
   </div>
@@ -102,14 +104,9 @@
       <div class="seat-vs">–</div>
       <div class="seat"><div class="seat-av empty" id="seatThem"><span class="ic" data-icon="user"></span></div><div class="seat-name" id="seatThemName">Arkadaşın</div><div class="seat-note" id="seatThemNote">bekleniyor <span class="dots"><i></i><i></i><i></i></span></div></div>
     </div>
-    <h2 class="display">Oda hazır</h2>
-    <p class="lead">Bu linki arkadaşına gönder. Linki açtığı anda karşına oturur, oyun başlar.</p>
-    <div class="linkbox">
-      <span class="ic" data-icon="link"></span>
-      <span class="linktext" id="roomLink"></span>
-      <button type="button" class="icon-btn small" id="btnCopy" aria-label="Linki kopyala"><span class="ic" data-icon="copy"></span></button>
-    </div>
-    <button type="button" class="btn primary big" id="btnShare"><span class="ic" data-icon="share"></span>Linki paylaş</button>
+    <h2 class="display">Oyun kuruldu</h2>
+    <p class="lead">Oyunun açık oyunlar listesinde. Siteye giren biri listeden katılınca oyun başlar.</p>
+    <button type="button" class="btn" id="btnShare"><span class="ic" data-icon="share"></span>İstersen linki gönder</button>
     <div class="list">
       <div class="list-row"><span>Maç</span><b id="roomTo">5 sayı</b></div>
       <div class="list-row"><span>Tahta</span><b id="roomTheme">Ceviz</b></div>

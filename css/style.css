@@ -57,6 +57,12 @@ body[data-screen="game"] #game { display: block; }
 .hero-board { position: relative; width: 100%; aspect-ratio: 548 / 390; transform: rotate(-2deg); margin: 4px 0; }
 .hero-board img { width: 100%; height: 100%; display: block; }
 @media (max-height: 640px) and (orientation: portrait) { .hero-board { display: none; } }
+/* dikey telefonda açık oyunlar hemen görünsün: süs tahtası en alta iner */
+@media (orientation: portrait) {
+  .form-col.two .col-a { display: contents; }
+  .form-col.two .col-b { order: 1; }
+  .form-col.two .hero-board { order: 2; margin-top: 8px; }
+}
 .col-a, .col-b { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 @media (orientation: landscape) and (max-height: 620px) {
   .form-col.two { max-width: 860px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 32px; align-items: start; }
@@ -122,10 +128,32 @@ input::placeholder { color: rgba(210, 191, 163, 0.7); }
 .install-tip p { margin: 0; flex: 1; font-size: 13px; font-weight: 600; line-height: 1.4; color: var(--sub); }
 .install-tip b { display: block; margin-bottom: 2px; color: var(--text); font-weight: 800; font-size: 14px; }
 .install-tip .tip-x { width: 34px; height: 34px; flex: none; margin: -6px 0 0; }
-.code-join { display: flex; gap: 8px; margin: 0; }
-.code-join input { flex: 1; min-width: 0; text-transform: uppercase; letter-spacing: 0.16em; font-weight: 800; }
-.code-join input::placeholder { letter-spacing: 0; text-transform: none; font-weight: 600; }
-.code-join .btn { flex: none; padding: 0 16px; min-height: 50px; }
+/* açık oyunlar listesi */
+.games { display: flex; flex-direction: column; gap: 8px; }
+.games-head { display: flex; align-items: center; justify-content: space-between; }
+.games-head h2 { margin: 0; }
+.live { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--sub); }
+.live i { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px rgba(95, 209, 142, 0.7); animation: livePulse 1.8s ease-in-out infinite; }
+@keyframes livePulse { 50% { opacity: 0.35; } }
+.game-list { list-style: none; margin: 0; padding: 0; border-radius: 16px; border: 1px solid var(--line); background: var(--card); overflow: hidden; }
+.game-list:empty { display: none; }
+.game-item { display: flex; align-items: center; gap: 10px; min-height: 62px; padding: 8px 10px 8px 12px; border-bottom: 1px solid rgba(255, 230, 200, 0.1); }
+.game-item:last-child { border-bottom: 0; }
+.game-item.mine { background: rgba(242, 187, 78, 0.08); }
+.gi-av { flex: none; display: flex; align-items: center; }
+.gi-av svg { display: block; }
+.gi-pair { display: flex; }
+.gi-pair svg + svg { margin-left: -8px; }
+.gi-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.gi-main b { font-size: 15.5px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gi-main b i { font-style: normal; color: var(--sub); font-weight: 600; }
+.gi-main span { font-size: 12.5px; font-weight: 600; color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn.small { min-height: 40px; padding: 0 14px; font-size: 14px; border-radius: 12px; flex: none; }
+.btn.small.primary { font-size: 14.5px; box-shadow: 0 2px 0 var(--gold-deep), 0 6px 14px rgba(0, 0, 0, 0.3); }
+.btn.small svg { width: 16px; height: 16px; }
+.gl-head { padding: 9px 12px 7px; font-size: 12px; font-weight: 800; letter-spacing: 0.02em; color: var(--sub); background: rgba(0, 0, 0, 0.14); border-bottom: 1px solid rgba(255, 230, 200, 0.1); }
+.games-empty { margin: 0; padding: 14px; border-radius: 16px; border: 1px dashed var(--line2); font-size: 13.5px; font-weight: 600; line-height: 1.45; color: var(--sub); text-align: center; }
+.new-game-head { margin: 4px 0 -8px; padding-top: 12px; border-top: 1px solid var(--line); }
 .sheet-card p.menu-tip { margin: -4px 10px 6px 44px; font-size: 13.5px; font-weight: 600; line-height: 1.45; color: var(--sub); }
 .foot { margin: 0; color: var(--sub); font-size: 12.5px; font-weight: 600; line-height: 1.4; text-align: center; }
 .hint { display: flex; align-items: center; gap: 10px; color: var(--sub); font-size: 13.5px; font-weight: 600; margin: 0; }

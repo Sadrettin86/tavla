@@ -1,6 +1,6 @@
 # Tavla
 
-Arkadaşınla online tavla. Oda kurarsın, linki WhatsApp'tan gönderirsin, linki açan karşına oturur.
+Arkadaşınla online tavla. Siteye girip oyun kurarsın; oyunun **Açık oyunlar** listesine düşer, siteye giren biri listeden katılınca başlarsınız. Link göndermek gerekmez (istersen yine gönderebilirsin).
 
 **Adres:** https://sadrettin86.github.io/tavla/
 
@@ -11,6 +11,7 @@ Arkadaşınla online tavla. Oda kurarsın, linki WhatsApp'tan gönderirsin, link
 - Sesler kodla üretilir, ses dosyası yok. Zar adları telefonun Türkçe sesiyle okunur (Şeşbeş, Düşeş…)
 - Laf atma butonları ve tepkiler (çay, alev, kahkaha…)
 - Pullar yay çizerek uçar, iz bırakır, yere oturur; kırılan pul havada takla atar; geri alınan hamle geri uçar; yeni elde pullar tahtaya dağıtılır
+- Açık oyunlar listesi: rakip bekleyen oyunlara **Katıl**, süren oyunları **İzle**; isimler listede görünür, kendi oyununa **Devam et** ile dönersin
 - Aynı telefonda iki kişi oynama
 - Oyun başladıktan sonra odaya gelen herkes izleyici olur
 - Telefon kilitlenip açılınca ya da sayfa yenilenince oyun kaldığı yerden devam eder
@@ -19,7 +20,7 @@ Arkadaşınla online tavla. Oda kurarsın, linki WhatsApp'tan gönderirsin, link
 
 - **iPhone:** Safari ya da Chrome'da paylaş menüsünden **Ana Ekrana Ekle**'yi seç, Tavla'yı ana ekrandaki simgeden aç. Tarayıcı çubukları olmadan açılır, tahta ekranın iki yanına değer. (iPhone tarayıcıları sayfalara tam ekran izni vermiyor, tek yol bu.)
 - **Android:** Oyuna girince kendiliğinden tam ekran olur. Menüdeki **Tam ekran** satırından açıp kapatabilirsin.
-- Ana ekrandan açılan uygulamada arkadaşının linkine dokunamıyorsan giriş ekranındaki **Oda kodu** kutusuna kodu yazıp katıl. Kod, bekleme ekranında ve paylaşılan mesajda yazar.
+- Ana ekrandan açılan uygulamada arkadaşının oyununa giriş ekranındaki **Açık oyunlar** listesinden katılırsın.
 
 ## Kurallar (Türk usulü, katı kurallar olmadan)
 
@@ -44,9 +45,11 @@ Repo sayfasında **Settings › Pages** bölümüne gir. **Source: Deploy from a
 4. **Proje ayarları › Uygulamalarınız** bölümünde web simgesine (`</>`) bas, uygulamayı kaydet.
 5. Çıkan `firebaseConfig` nesnesini `js/firebase-config.js` dosyasındaki `null` yerine yapıştır. İçinde `databaseURL` satırı olmalı; yoksa Realtime Database sayfasının üstündeki adresi ekle.
 
-Bu ayar değerleri gizli değildir, sitenin kodunda görünmeleri normaldir. Veritabanına erişimi `database.rules.json` sınırlar: yalnızca oda kodunu bilen o odayı okuyup yazabilir, oda listesi okunamaz.
+Bu ayar değerleri gizli değildir, sitenin kodunda görünmeleri normaldir. Veritabanına erişimi `database.rules.json` sınırlar: odaların kendisi listelenemez, yalnızca `lobby/` altındaki kısa özet (isimler, maç uzunluğu, durum) herkese açıktır.
 
-Firebase ayarı yokken site açılır, “Aynı telefonda” modu çalışır; “Oda kur” düğmesi kapalı kalır.
+**Kurallar güncellendiğinde:** `database.rules.json` değişince (ör. açık oyunlar listesi eklenince) içeriğini yeniden **Realtime Database › Rules** sekmesine yapıştırıp **Publish** demek gerekir. Yapılmazsa giriş ekranında “Oyun listesi şu an açılamadı” yazar; link ile oyun yine çalışır.
+
+Firebase ayarı yokken site açılır, “Aynı telefonda” modu çalışır; “Oyun kur” düğmesi kapalı kalır.
 
 ## Yerelde deneme
 

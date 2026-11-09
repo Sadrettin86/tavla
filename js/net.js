@@ -15,6 +15,38 @@ export function newRoomId() {
 }
 export const validRoomId = (s) => /^[A-HJ-NP-Z2-9]{6}$/.test(s || '');
 
+// Firebase SDK bir kez yüklenir (oda ve açık oyunlar listesi aynı bağlantıyı kullanır)
+let fbP = null;
+function loadFirebase() {
+  if (!fbP) {
+    fbP = Promise.all([
+      import(`https://www.gstatic.com/firebasejs/${FB_VERSION}/firebase-app.js`),
+      import(`https://www.gstatic.com/firebasejs/${FB_VERSION}/firebase-database.js`),
+    ]).then(([A, D]) => {
+      const app = A.getApps().length ? A.getApp() : A.initializeApp(firebaseConfig);
+      return { D, db: D.getDatabase(app) };
+    });
+    fbP.catch(() => { fbP = null; });
+  }
+  return fbP;
+}
+
+// ------------------------------------------------------------------ açık oyunlar listesi
+// lobby/{oda}: { host, w, b, wi, bi, to, st: open|play|over, t, on: {istemci: true} }
+// "on": odadaki oyunculardan bağlı olanlar. Kimse bağlı değilse liste o oyunu göstermez.
+export function onlineCount(e) {
+  const now = Date.now();
+  return Object.values((e && e.on) || {}).filter((v) => v === true || (typeof v === 'number' && now - v < 6000)).length;
+}
+
+export async function watchLobby(cb, onErr) {
+  if (testMode()) return watchLocalLobby(cb);
+  if (!firebaseReady()) return () => {};
+  const { D, db } = await loadFirebase();
+  const q = D.query(D.ref(db, 'lobby'), D.orderByChild('t'), D.limitToLast(60));
+  return D.onValue(q, (snap) => cb(snap.val() || {}), (e) => onErr && onErr(e));
+}
+
 export async function connectRoom(id, me, handlers) {
   if (testMode()) return new LocalRoom(id, me, handlers);
   if (!firebaseReady()) throw new Error('firebase-ayari-yok');
@@ -35,6 +67,8 @@ export class OfflineRoom {
   }
   setPresence() {}
   sendChat() {}
+  publish() {}
+  lobbyOnline() {}
   close() {}
 }
 
@@ -43,14 +77,12 @@ class FirebaseRoom {
   constructor(id, me, h) { this.id = id; this.me = { ...me }; this.h = h; this.unsubs = []; }
 
   async init() {
-    const [A, D] = await Promise.all([
-      import(`https://www.gstatic.com/firebasejs/${FB_VERSION}/firebase-app.js`),
-      import(`https://www.gstatic.com/firebasejs/${FB_VERSION}/firebase-database.js`),
-    ]);
+    const { D, db } = await loadFirebase();
     this.D = D;
-    const app = A.getApps().length ? A.getApp() : A.initializeApp(firebaseConfig);
-    this.db = D.getDatabase(app);
+    this.db = db;
     const base = `rooms/${this.id}`;
+    this.lobbyRef = D.ref(db, `lobby/${this.id}`);
+    this.onRef = D.ref(db, `lobby/${this.id}/on/${this.me.id}`);
     this.stateRef = D.ref(this.db, `${base}/state`);
     this.presRef = D.ref(this.db, `${base}/presence`);
     this.myRef = D.ref(this.db, `${base}/presence/${this.me.id}`);
@@ -65,6 +97,7 @@ class FirebaseRoom {
       const on = s.val() === true;
       this.h.onConn && this.h.onConn(on);
       if (on) D.onDisconnect(this.myRef).remove().then(() => this.writePresence()).catch(() => {});
+      if (on && this.lobbyOn) this.lobbyOnline(true);
     }));
     const startKey = D.push(this.chatRef).key; // yazılmaz; sadece "bundan sonrası" için işaret
     this.unsubs.push(D.onChildAdded(D.query(this.chatRef, D.orderByKey(), D.startAfter(startKey)), (s) => this.h.onChat(s.val()), () => {}));
@@ -91,15 +124,31 @@ class FirebaseRoom {
     return this.D.push(this.chatRef, { ...msg, from: this.me.id, ts: this.D.serverTimestamp() }).catch(() => {});
   }
 
+  // açık oyunlar listesindeki kayıt
+  publish(info) {
+    return this.D.update(this.lobbyRef, { ...info, t: this.D.serverTimestamp() }).catch(() => {});
+  }
+
+  // listede "bağlı oyuncu" işareti; bağlantı kopunca sunucu kendisi siler
+  lobbyOnline(on) {
+    const D = this.D;
+    this.lobbyOn = on;
+    if (on) return D.onDisconnect(this.onRef).remove().then(() => D.set(this.onRef, true)).catch(() => {});
+    D.onDisconnect(this.onRef).cancel().catch(() => {});
+    return D.remove(this.onRef).catch(() => {});
+  }
+
   close() {
     for (const u of this.unsubs) { try { u(); } catch (e) { /* yok say */ } }
     try { this.D.onDisconnect(this.myRef).cancel(); this.D.remove(this.myRef); } catch (e) { /* yok say */ }
+    if (this.lobbyOn) this.lobbyOnline(false);
   }
 }
 
 // ------------------------------------------------------------------ yerel test (?yerel ile açılır)
 class LocalRoom {
   constructor(id, me, h) {
+    this.id = id;
     this.k = 'tavla:yerel:' + id;
     this.me = { ...me };
     this.h = h;
@@ -124,6 +173,7 @@ class LocalRoom {
     return true;
   }
   beat() {
+    if (this.lobbyOn) writeLocalLobby((L) => { if (L[this.id]) L[this.id].on = { ...(L[this.id].on || {}), [this.me.id]: Date.now() }; });
     this.peers[this.me.id] = { name: this.me.name, color: this.me.color || '', last: Date.now() };
     this.ch.postMessage({ t: 'hb', id: this.me.id, name: this.me.name, color: this.me.color || '' });
     this.emitPresence();
@@ -145,6 +195,16 @@ class LocalRoom {
     this.h.onPresence(o);
   }
   setPresence(p) { Object.assign(this.me, p); this.beat(); }
+  publish(info) { writeLocalLobby((L) => { L[this.id] = { ...(L[this.id] || {}), ...info, t: Date.now() }; }); }
+  lobbyOnline(on) {
+    this.lobbyOn = on;
+    writeLocalLobby((L) => {
+      if (!L[this.id]) return;
+      const o = { ...(L[this.id].on || {}) };
+      if (on) o[this.me.id] = Date.now(); else delete o[this.me.id];
+      L[this.id].on = o;
+    });
+  }
   sendChat(msg) {
     const m = { ...msg, from: this.me.id, ts: Date.now() };
     this.ch.postMessage({ t: 'chat', msg: m });
@@ -152,7 +212,26 @@ class LocalRoom {
   }
   close() {
     clearInterval(this.iv); clearInterval(this.iv2);
+    if (this.lobbyOn) this.lobbyOnline(false);
     this.ch.postMessage({ t: 'bye', id: this.me.id });
     this.ch.close();
   }
+}
+
+const LOBBY_K = 'tavla:yerel:lobby';
+function readLocalLobby() { try { return JSON.parse(localStorage.getItem(LOBBY_K)) || {}; } catch (e) { return {}; } }
+function writeLocalLobby(fn) {
+  const L = readLocalLobby();
+  fn(L);
+  localStorage.setItem(LOBBY_K, JSON.stringify(L));
+  const ch = new BroadcastChannel(LOBBY_K);
+  ch.postMessage(L);
+  ch.close();
+}
+function watchLocalLobby(cb) {
+  const ch = new BroadcastChannel(LOBBY_K);
+  ch.onmessage = (e) => cb(e.data || readLocalLobby());
+  cb(readLocalLobby());
+  const iv = setInterval(() => cb(readLocalLobby()), 2000);
+  return () => { ch.close(); clearInterval(iv); };
 }

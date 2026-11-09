@@ -24,6 +24,26 @@
           }
         }
       }
+    },
+    "lobby": {
+      ".read": true,
+      ".indexOn": ["t"],
+      "$room": {
+        ".write": "$room.matches(/^[A-HJ-NP-Z2-9]{6}$/)",
+        ".validate": "newData.hasChildren(['host', 'st', 't'])",
+        "host": { ".validate": "newData.isString() && newData.val().length <= 24" },
+        "w": { ".validate": "newData.isString() && newData.val().length <= 24" },
+        "b": { ".validate": "newData.isString() && newData.val().length <= 24" },
+        "wi": { ".validate": "newData.isString() && newData.val().matches(/^([a-f0-9]{16})?$/)" },
+        "bi": { ".validate": "newData.isString() && newData.val().matches(/^([a-f0-9]{16})?$/)" },
+        "to": { ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 15" },
+        "st": { ".validate": "newData.isString() && newData.val().matches(/^(open|play|over)$/)" },
+        "t": { ".validate": "newData.isNumber() && newData.val() <= now" },
+        "on": {
+          "$cid": { ".validate": "$cid.matches(/^[a-f0-9]{16}$/) && newData.isBoolean()" }
+        },
+        "$other": { ".validate": false }
+      }
     }
   }
 }

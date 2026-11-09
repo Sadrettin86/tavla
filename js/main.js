@@ -6,7 +6,7 @@ import * as FX from './fx.js';
 import * as FS from './fullscreen.js';
 import { icon, logoDice } from './icons.js';
 import { diceName, upperTR, PHRASES, REACTIONS } from './names.js';
-import { connectRoom, OfflineRoom, newRoomId, validRoomId, onlineAvailable, testMode } from './net.js';
+import { connectRoom, OfflineRoom, newRoomId, validRoomId, onlineAvailable, testMode, watchLobby, onlineCount } from './net.js';
 import { THEMES, tableBG, checkerIcon, renderBoard } from './theme.js';
 
 const $ = (s) => document.querySelector(s);
@@ -92,15 +92,10 @@ class App {
       $('#installTip').hidden = false;
     }
     $('#btnTipClose').addEventListener('click', () => { $('#installTip').hidden = true; store.set('ipucu', 1); });
-    const code = $('#codeIn');
-    code.addEventListener('input', () => { code.value = code.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); });
-    $('#codeForm').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const id = code.value.trim().toUpperCase();
-      if (!validRoomId(id)) { this.globalToast('Oda kodu 6 karakter olmalı'); code.focus(); return; }
-      code.value = '';
-      code.blur();
-      location.hash = id;
+    // açık oyunlar listesi: katıl / izle / devam et
+    $('#gameList').addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-room]');
+      if (b) this.joinFromList(b.dataset.room);
     });
 
     // katıl
@@ -109,7 +104,6 @@ class App {
     $('#btnJoinBack').addEventListener('click', () => this.leave());
 
     // bekleme
-    $('#btnCopy').addEventListener('click', () => this.copyLink());
     $('#btnShare').addEventListener('click', () => this.shareLink());
     $('#btnToBoard').addEventListener('click', () => this.enterGame());
     $('#btnCloseRoom').addEventListener('click', () => this.leave());
@@ -190,6 +184,82 @@ class App {
   show(name) {
     document.body.dataset.screen = name;
     if (name !== 'game') { $('#lafPanel').hidden = true; $('#menu').hidden = true; }
+    if (name === 'lobby') this.startLobby(); else this.stopLobby();
+  }
+
+  // ============================================================ açık oyunlar listesi
+  startLobby() {
+    if (!onlineAvailable()) { $('#games').hidden = true; return; }
+    $('#games').hidden = false;
+    if (this.lobbyStop) return;
+    if (!this.lastLobby) this.paintGames(null);
+    let stop = null, alive = true;
+    this.lobbyStop = () => { alive = false; if (stop) stop(); clearInterval(this.lobbyTick); };
+    watchLobby((L) => this.paintGames(L), () => this.paintGames('err'))
+      .then((f) => { if (alive) stop = f; else f(); })
+      .catch(() => this.paintGames('err'));
+    // "3 dk önce" yazıları ve bağlantısı kopanlar için arada bir yeniden çiz
+    this.lobbyTick = setInterval(() => { if (this.lastLobby) this.paintGames(this.lastLobby); }, 20000);
+  }
+
+  stopLobby() {
+    if (this.lobbyStop) { this.lobbyStop(); this.lobbyStop = null; }
+  }
+
+  paintGames(L) {
+    const list = $('#gameList'), empty = $('#gamesEmpty');
+    if (L === null || L === 'err') {
+      list.innerHTML = '';
+      empty.hidden = false;
+      empty.textContent = L === null ? 'Oyunlar yükleniyor…' : 'Oyun listesi şu an açılamadı.';
+      return;
+    }
+    this.lastLobby = L;
+    const now = Date.now(), me = this.me.id;
+    const rows = Object.entries(L)
+      .map(([id, e]) => ({ ...e, id, n: onlineCount(e), mine: !!e && (e.wi === me || e.bi === me) }))
+      .filter((e) => validRoomId(e.id) && (e.st === 'open' || e.st === 'play') && (e.n > 0 || e.mine) && now - (e.t || 0) < 12 * 3600e3);
+    const byNew = (a, b) => (b.t || 0) - (a.t || 0);
+    const open = rows.filter((e) => e.st === 'open').sort(byNew).slice(0, 8);
+    const play = rows.filter((e) => e.st === 'play').sort(byNew).slice(0, 6);
+    const th = this.settings.theme;
+    const ago = (t) => { const m = Math.floor(Math.max(0, now - (t || now)) / 60000); return m < 1 ? 'az önce' : m < 60 ? `${m} dk önce` : `${Math.floor(m / 60)} sa önce`; };
+    const btn = (e, label, cls, ic = '') => `<button type="button" class="btn small ${cls}" data-room="${e.id}">${ic}${label}</button>`;
+    const item = (e) => {
+      const isOpen = e.st === 'open';
+      const who = isOpen ? esc(e.host || e.w || 'Oyuncu') : `${esc(e.w || '?')} <i>–</i> ${esc(e.b || '?')}`;
+      const meta = `${e.to || 5} sayılık maç · ${isOpen ? ago(e.t) : 'oynanıyor'}`;
+      const av = isOpen ? checkerIcon(th, 'w', 30, 'gl' + e.id) : `<span class="gi-pair">${checkerIcon(th, 'w', 24, 'glw' + e.id)}${checkerIcon(th, 'b', 24, 'glb' + e.id)}</span>`;
+      const action = e.mine ? btn(e, 'Devam et', 'primary') : isOpen ? btn(e, 'Katıl', 'primary') : btn(e, 'İzle', '', icon.eye(16));
+      return `<li class="game-item${isOpen ? ' open' : ''}${e.mine ? ' mine' : ''}"><span class="gi-av">${av}</span><span class="gi-main"><b>${who}</b><span>${meta}</span></span>${action}</li>`;
+    };
+    let html = '';
+    if (open.length) html += open.map(item).join('');
+    if (play.length) html += `<li class="gl-head">Süren oyunlar</li>` + play.map(item).join('');
+    list.innerHTML = html;
+    empty.hidden = !!html;
+    if (!html) empty.textContent = 'Şu an açık oyun yok. Aşağıdan bir oyun kur; siteye giren biri listeden katılınca başlarsınız.';
+  }
+
+  async joinFromList(id) {
+    if (this.joining || !validRoomId(id)) return;
+    const name = this.readName('#name');
+    if (!name) return;
+    await this.joinRoom(id, name, (msg) => this.globalToast(msg, 3500));
+  }
+
+  // listedeki kaydı oyunun durumuyla eşitle (yalnızca oyuncular yazar)
+  syncLobby() {
+    const G = this.G;
+    if (!G || !this.room || this.mode !== 'online' || !this.myColor) return;
+    const P = G.players;
+    const st = !(P.w && P.b) ? 'open' : G.phase === 'matchover' ? 'over' : 'play';
+    const host = (P.w || P.b).name;
+    const info = { host, to: G.match.to, st, w: P.w ? P.w.name : '', b: P.b ? P.b.name : '', wi: P.w ? P.w.id : '', bi: P.b ? P.b.id : '' };
+    const key = JSON.stringify(info);
+    if (key === this.lobbyKey) return;
+    this.lobbyKey = key;
+    this.room.publish(info);
   }
 
   buildSwatches(box, onPick) {
@@ -251,10 +321,12 @@ class App {
       if (!ok) throw new Error('oda kurulamadı');
       history.replaceState(null, '', location.pathname + location.search + '#' + id);
       await this.waitState(5000);
+      this.syncLobby();
+      this.room.lobbyOnline(true);
       this.showRoom();
     } catch (e) {
       console.error(e);
-      this.globalToast('Oda kurulamadı. Bağlantını ve Firebase ayarını kontrol et.', 4000);
+      this.globalToast('Oyun kurulamadı. Bağlantını ve Firebase ayarını kontrol et.', 4000);
       this.leave();
     } finally { btn.disabled = !onlineAvailable(); }
   }
@@ -269,13 +341,15 @@ class App {
     this.show('join');
   }
 
-  async joinRoom(id) {
+  async joinRoom(id, name = null, report = null) {
     this.sound.unlock();
-    if (!validRoomId(id)) return;
-    const name = this.readName('#joinName');
+    if (!validRoomId(id) || this.joining) return;
+    if (!name) name = this.readName('#joinName');
     if (!name) return;
+    const say = report || ((msg) => { const err = $('#joinError'); err.hidden = false; err.textContent = msg; });
     const btn = $('#btnJoin');
     btn.disabled = true;
+    this.joining = true;
     try {
       this.mode = 'online';
       this.roomId = id;
@@ -292,24 +366,24 @@ class App {
       });
       const G = await this.waitState(6000);
       if (!G) {
-        const err = $('#joinError');
-        err.hidden = false; err.textContent = 'Bu oda bulunamadı. Linki kontrol et.';
-        this.room.close(); this.room = null; this.mode = null;
+        say(report ? 'Bu oyun artık yok.' : 'Bu oda bulunamadı. Linki kontrol et.');
+        this.room.close(); this.room = null; this.mode = null; this.roomId = null;
         return;
       }
       this.updateSeat();
       this.room.setPresence({ name, color: this.myColor || '' });
+      history.replaceState(null, '', location.pathname + location.search + '#' + id);
+      if (this.myColor) { this.syncLobby(); this.room.lobbyOnline(true); }
       if (G.players.w && G.players.b) {
         this.enterGame();
         if (this.spectator()) FX.toast(this.stage, 'Oyun başlamış, izleyici olarak katıldın', 2800);
       } else this.showRoom();
     } catch (e) {
       console.error(e);
-      const err = $('#joinError');
-      err.hidden = false; err.textContent = 'Bağlanılamadı. İnternetini kontrol edip tekrar dene.';
+      say('Bağlanılamadı. İnternetini kontrol edip tekrar dene.');
       if (this.room) { this.room.close(); this.room = null; }
-      this.mode = null;
-    } finally { btn.disabled = false; }
+      this.mode = null; this.roomId = null;
+    } finally { btn.disabled = false; this.joining = false; }
   }
 
   waitState(ms) {
@@ -338,6 +412,7 @@ class App {
 
   leave() {
     if (this.room) { try { this.room.close(); } catch (e) { /* yok say */ } }
+    this.lobbyKey = null;
     this.room = null; this.G = null; this.mode = null; this.myColor = null; this.roomId = null;
     this.presence = {}; this.sel = null; this.dests = null; this.oppOnline = null;
     this.openShown = { w: 0, b: 0 };
@@ -362,7 +437,7 @@ class App {
   async shareLink() {
     this.sound.unlock();
     if (navigator.share) {
-      try { await navigator.share({ title: 'Tavla', text: `Tavla oynayalım mı? Linke tıkla, karşıma otur. (Oda kodu: ${this.roomId})`, url: this.link() }); return; }
+      try { await navigator.share({ title: 'Tavla', text: 'Tavla oynayalım mı? Linke tıkla, karşıma otur.', url: this.link() }); return; }
       catch (e) { if (e && e.name === 'AbortError') return; }
     }
     this.copyLink();
@@ -376,7 +451,6 @@ class App {
   paintRoom() {
     if (!this.roomId) return;
     $('#roomCode').textContent = this.roomId;
-    $('#roomLink').textContent = this.link().replace(/^https?:\/\//, '');
     const G = this.G;
     if (!G) return;
     const mine = this.myColor || 'w';
@@ -460,6 +534,7 @@ class App {
     const prev = this.G;
     this.G = G;
     this.updateSeat();
+    this.syncLobby();
     waiters.forEach((f) => f());
     const screen = document.body.dataset.screen;
     if (screen === 'room') {
