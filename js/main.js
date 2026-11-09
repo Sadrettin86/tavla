@@ -283,12 +283,11 @@ class App {
       await this.room.transact((G) => {
         if (!G) return null;
         const P = G.players;
+        // aynı tarayıcıdan dönen oyuncu yerini kimliğinden tanır
         if ((P.w && P.w.id === this.me.id) || (P.b && P.b.id === this.me.id)) return undefined;
         if (!P.b) return Rules.sit(G, 'b', { id: this.me.id, name });
         if (!P.w) return Rules.sit(G, 'w', { id: this.me.id, name });
-        // başka tarayıcıdan dönen oyuncu: aynı adla yerine oturur
-        const same = ['w', 'b'].find((c) => P[c].name.toLocaleLowerCase('tr') === name.toLocaleLowerCase('tr'));
-        if (same) return Rules.reseat(G, same, { id: this.me.id, name });
+        // iki yer de dolu: sonradan gelen izleyici olur (adı aynı olsa bile kimsenin yerine oturamaz)
         return undefined;
       });
       const G = await this.waitState(6000);
@@ -300,7 +299,10 @@ class App {
       }
       this.updateSeat();
       this.room.setPresence({ name, color: this.myColor || '' });
-      if (G.players.w && G.players.b) this.enterGame(); else this.showRoom();
+      if (G.players.w && G.players.b) {
+        this.enterGame();
+        if (this.spectator()) FX.toast(this.stage, 'Oyun başlamış, izleyici olarak katıldın', 2800);
+      } else this.showRoom();
     } catch (e) {
       console.error(e);
       const err = $('#joinError');
@@ -590,7 +592,7 @@ class App {
     main.disabled = !enabled;
     main.classList.toggle('ready', ready);
     $('#btnUndo').disabled = !(my && G.phase === 'move' && G.moves.length > 0);
-    $('#btnLaf').hidden = this.mode !== 'online';
+    $('#btnLaf').hidden = this.mode !== 'online' || this.spectator();
     $('#btnSound').innerHTML = (this.settings.sound ? icon.sound : icon.mute)(20);
     $('#btnSound').setAttribute('aria-label', this.settings.sound ? 'Sesi kapat' : 'Sesi aç');
   }
@@ -929,6 +931,14 @@ class App {
     this.presence = p || {};
     if (!this.G) return;
     if (document.body.dataset.screen === 'game') this.renderRails();
+    // yeni gelen izleyiciler (oyunculara kısa bir not)
+    const seated = new Set(['w', 'b'].map((c) => this.G.players[c] && this.G.players[c].id).filter(Boolean));
+    const watchers = Object.keys(this.presence).filter((id) => !seated.has(id) && id !== this.me.id);
+    const full = !!(this.G.players.w && this.G.players.b);
+    if (this.watchers && full && this.mode === 'online' && this.myColor && document.body.dataset.screen === 'game') {
+      for (const id of watchers) if (!this.watchers.has(id)) FX.toast(this.stage, `${(this.presence[id] && this.presence[id].name) || 'Biri'} izlemeye geldi`, 2400);
+    }
+    this.watchers = new Set(watchers);
     if (this.mode === 'online' && this.myColor) {
       const opp = this.G.players[other(this.myColor)];
       if (opp) {

@@ -12,7 +12,7 @@ Arkadaşınla online tavla. Oda kurarsın, linki WhatsApp'tan gönderirsin, link
 - Laf atma butonları ve tepkiler (çay, alev, kahkaha…)
 - Pullar yay çizerek uçar, iz bırakır, yere oturur; kırılan pul havada takla atar; geri alınan hamle geri uçar; yeni elde pullar tahtaya dağıtılır
 - Aynı telefonda iki kişi oynama
-- Odaya üçüncü biri girerse izleyici olur
+- Oyun başladıktan sonra odaya gelen herkes izleyici olur
 - Telefon kilitlenip açılınca ya da sayfa yenilenince oyun kaldığı yerden devam eder
 
 ## Telefonda tam ekran
@@ -81,4 +81,4 @@ node tests/rules.test.mjs
 
 - Zarlar `crypto.getRandomValues` ile atılır.
 - Odalar Firebase'de `rooms/` altında birikir, her biri birkaç KB. Arada bir konsoldan silebilirsin.
-- Arkadaşın linki başka bir tarayıcıda açarsa aynı adı yazarak yerine geri oturabilir.
+- İki yer dolduktan sonra linki açan herkes izleyici olarak girer, adı oyunculardan biriyle aynı olsa bile. Oyuncu aynı telefon ve aynı tarayıcıdan dönerse yeri durur; başka tarayıcıdan ya da ana ekran uygulamasından gelirse o da izleyici olur.
