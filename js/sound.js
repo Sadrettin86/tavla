@@ -61,6 +61,18 @@ export class Sound {
         const comp = this.ctx.createDynamicsCompressor();
         comp.threshold.value = -14; comp.ratio.value = 4;
         this.master.connect(comp).connect(this.ctx.destination);
+        // küçük oda yankısı: sesler boşlukta değil, masada çalıyormuş gibi
+        this.verb = this.ctx.createConvolver();
+        const irLen = Math.floor(this.ctx.sampleRate * 0.4);
+        const ir = this.ctx.createBuffer(2, irLen, this.ctx.sampleRate);
+        for (let ch = 0; ch < 2; ch++) {
+          const d = ir.getChannelData(ch);
+          for (let i = 0; i < irLen; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / irLen, 3.2) * (i < 40 ? i / 40 : 1);
+        }
+        this.verb.buffer = ir;
+        this.wet = this.ctx.createGain();
+        this.wet.gain.value = 0.16;
+        this.verb.connect(this.wet).connect(this.master);
         const len = Math.floor(this.ctx.sampleRate * 1.2);
         this.noise = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
         const d = this.noise.getChannelData(0);
@@ -133,49 +145,104 @@ export class Sound {
     return o;
   }
 
+  // Titreşim kipi: kısa, kendiliğinden sönen sinüs (ahşabın, zarın, pulun "çınlaması")
+  ring(t, f, gain, decay) {
+    const c = this.ctx;
+    const o = c.createOscillator();
+    o.frequency.value = f * (0.97 + Math.random() * 0.06);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain, t + 0.0015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
+    o.connect(g);
+    g.connect(this.master);
+    g.connect(this.verb);
+    o.start(t);
+    o.stop(t + decay + 0.03);
+  }
+
+  // Çarpma: çok kısa bir tıkırtı + çarpışan cisimlerin kendi titreşimleri
+  impact(t, kind, gain = 1) {
+    const K = {
+      // zar ahşap tahtaya: sert, parlak tık ve tahtanın tok gövdesi
+      dieWood: { click: [3600, 1.1, 0.9, 0.012], modes: [[5200, 0.022, 0.22], [7600, 0.016, 0.12], [210, 0.12, 0.5], [430, 0.085, 0.3], [770, 0.06, 0.2], [1380, 0.04, 0.14]] },
+      // zar zara: yalnızca ince, sert tıkırtı
+      dieDie: { click: [5200, 1.8, 0.7, 0.008], modes: [[4300, 0.026, 0.28], [6200, 0.02, 0.18]] },
+      // pul tahtaya: yumuşak tık ve kalın ahşap "tok"
+      chkWood: { click: [1700, 1.2, 0.75, 0.02], modes: [[1250, 0.032, 0.2], [2150, 0.022, 0.12], [175, 0.14, 0.62], [350, 0.1, 0.36], [640, 0.065, 0.2]] },
+      // pul pula: daha tiz, çınlayan çarpma
+      chkChk: { click: [3000, 1.4, 0.85, 0.014], modes: [[2550, 0.04, 0.32], [3900, 0.028, 0.2], [1420, 0.035, 0.2]] },
+    }[kind];
+    const [cf, cq, cg, cd] = K.click;
+    this.burst(t, { f: cf * (0.9 + Math.random() * 0.2), q: cq, gain: cg * gain, decay: cd, len: 0.05 });
+    for (const [f, d, a] of K.modes) this.ring(t, f, a * gain * 0.55, d * (0.85 + Math.random() * 0.3));
+  }
+
+  // Pul tahtada kayarken çıkan hafif sürtünme
+  slide() {
+    if (!this.ok) return;
+    const c = this.ctx, t = this.t;
+    const src = c.createBufferSource(); src.buffer = this.noise;
+    const fl = c.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = 900; fl.Q.value = 0.7;
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.22, t + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+    src.connect(fl).connect(g).connect(this.master);
+    src.start(t, Math.random() * 0.8, 0.2);
+  }
+
   // --- oyun sesleri
   dice() {
     if (!this.ok) return;
-    const t0 = this.t;
+    const t0 = this.t, R = Math.random;
+    // avuçta sallama: zarlar birbirine çarpar
     let t = t0;
-    for (let i = 0; i < 9; i++) {
-      t += 0.03 + Math.random() * 0.06;
-      this.burst(t, { f: 2400 + Math.random() * 1600, q: 2.2, gain: 0.7 + Math.random() * 0.3, decay: 0.04 });
+    for (let i = 0; i < 7; i++) { t += 0.024 + R() * 0.034; this.impact(t, 'dieDie', 0.22 + R() * 0.16); }
+    // atış: her zar tahtaya düşer, giderek sıklaşan ve kısılan sekmelerle durur
+    for (let k = 0; k < 2; k++) {
+      let tt = t0 + 0.27 + k * (0.025 + R() * 0.03), dt = 0.11 + R() * 0.035, g = 1;
+      for (let n = 0; n < 7 && dt > 0.018; n++) {
+        this.impact(tt, 'dieWood', g * (0.8 + R() * 0.25));
+        tt += dt; dt *= 0.6 + R() * 0.06; g *= 0.58;
+      }
+      // son yuvarlanma: kenar üstünde küçük tıkırtılar
+      for (let j = 0; j < 3; j++) this.impact(tt + j * (0.03 + R() * 0.02), 'dieWood', 0.06);
     }
-    // tahtaya düşüş: iki tok vuruş
-    for (const [dt, gn] of [[0.08, 1], [0.2, 0.7]]) {
-      this.burst(t + dt, { f: 1500, q: 1.8, gain: gn, decay: 0.07 });
-      this.tone(t + dt, { f: 210, f2: 120, gain: 0.45 * gn, decay: 0.09 });
-    }
+    // iki zar yolda birbirine değer
+    this.impact(t0 + 0.34 + R() * 0.05, 'dieDie', 0.45);
   }
 
   place() {
     if (!this.ok) return;
     const t = this.t;
-    this.burst(t, { f: 2100, q: 2.8, gain: 0.55, decay: 0.045 });
-    this.tone(t, { f: 190, f2: 110, gain: 0.32, decay: 0.09 });
+    this.impact(t, 'chkWood', 1);
+    this.impact(t + 0.028 + Math.random() * 0.01, 'chkWood', 0.18); // küçük ikinci sekme
   }
 
   hit() {
     if (!this.ok) return;
     const t = this.t;
-    this.burst(t, { f: 2600, q: 2, gain: 0.8, decay: 0.05 });
-    this.tone(t, { f: 140, f2: 60, gain: 0.5, decay: 0.16 });
+    this.impact(t, 'chkChk', 1.15);
     // savrulma
     const c = this.ctx;
     const src = c.createBufferSource(); src.buffer = this.noise;
-    const fl = c.createBiquadFilter(); fl.type = 'bandpass'; fl.Q.value = 1.2;
-    fl.frequency.setValueAtTime(600, t + 0.03); fl.frequency.exponentialRampToValueAtTime(3200, t + 0.28);
-    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t + 0.03); g.gain.exponentialRampToValueAtTime(0.22, t + 0.1); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.32);
-    src.connect(fl).connect(g).connect(this.master); src.start(t + 0.03, 0.2, 0.4);
-    this.burst(t + 0.3, { f: 1700, q: 2.5, gain: 0.4, decay: 0.05 });
+    const fl = c.createBiquadFilter(); fl.type = 'bandpass'; fl.Q.value = 1.1;
+    fl.frequency.setValueAtTime(500, t + 0.03); fl.frequency.exponentialRampToValueAtTime(2600, t + 0.3);
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t + 0.03); g.gain.exponentialRampToValueAtTime(0.12, t + 0.12); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+    src.connect(fl).connect(g).connect(this.master); src.start(t + 0.03, 0.2, 0.45);
+    // kenara düşüş
+    this.impact(t + 0.68, 'chkWood', 0.7);
+    this.impact(t + 0.71, 'chkChk', 0.25);
   }
 
   bearOff() {
     if (!this.ok) return;
     const t = this.t;
-    this.burst(t, { f: 1600, q: 2, gain: 0.6, decay: 0.05 });
-    this.tone(t + 0.02, { f: 520, f2: 880, type: 'triangle', gain: 0.2, decay: 0.16 });
+    // tepsiye bırakılır, diğer toplanmış pullara değer
+    this.impact(t, 'chkWood', 0.85);
+    this.impact(t + 0.018, 'chkChk', 0.45);
+    this.impact(t + 0.05, 'chkWood', 0.15);
   }
 
   turn() {

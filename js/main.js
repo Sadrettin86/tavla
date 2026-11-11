@@ -909,6 +909,7 @@ class App {
         break;
       }
       case 'move':
+        this.sound.slide();
         await this.board.animateMove(a.m, a.by, { board: before }, {
           onLand: (off) => (off ? this.sound.bearOff() : this.sound.place()),
           onHit: (x, y) => {
