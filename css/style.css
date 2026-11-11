@@ -140,14 +140,16 @@ input::placeholder { color: rgba(210, 191, 163, 0.7); }
 .game-item { display: flex; align-items: center; gap: 10px; min-height: 62px; padding: 8px 10px 8px 12px; border-bottom: 1px solid rgba(255, 230, 200, 0.1); }
 .game-item:last-child { border-bottom: 0; }
 .game-item.mine { background: rgba(242, 187, 78, 0.08); }
+.game-item.waiting { background: rgba(242, 187, 78, 0.14); box-shadow: inset 3px 0 0 var(--gold); }
+.game-item.waiting .dots { margin-left: 4px; vertical-align: middle; }
 .gi-av { flex: none; display: flex; align-items: center; }
 .gi-av svg { display: block; }
 .gi-pair { display: flex; }
 .gi-pair svg + svg { margin-left: -8px; }
 .gi-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.gi-main b { font-size: 15.5px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.gi-main b i { font-style: normal; color: var(--sub); font-weight: 600; }
-.gi-main span { font-size: 12.5px; font-weight: 600; color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gi-main > b { font-size: 15.5px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gi-main > b i { font-style: normal; color: var(--sub); font-weight: 600; }
+.gi-main > span { font-size: 12.5px; font-weight: 600; color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .btn.small { min-height: 40px; padding: 0 14px; font-size: 14px; border-radius: 12px; flex: none; }
 .btn.small.primary { font-size: 14.5px; box-shadow: 0 2px 0 var(--gold-deep), 0 6px 14px rgba(0, 0, 0, 0.3); }
 .btn.small svg { width: 16px; height: 16px; }
@@ -169,34 +171,13 @@ input::placeholder { color: rgba(210, 191, 163, 0.7); }
 .ic { display: inline-flex; }
 .ic svg { display: block; }
 
-/* katıl / bekleme */
+/* katıl */
 .join-card { display: flex; flex-direction: column; gap: 6px; padding: 14px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); }
 .room-code { font-family: var(--display); font-size: 34px; letter-spacing: 3px; }
-.topbar { display: flex; align-items: center; justify-content: space-between; }
-.topbar-title { font-weight: 800; font-size: 16px; }
-.topbar-gap { width: 44px; height: 44px; flex: none; }
-.seats { display: flex; align-items: flex-start; justify-content: space-between; padding: 8px 6px 0; }
-.seat { width: 130px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
-.seat-av { width: 76px; height: 76px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255, 236, 210, 0.06); }
-.seat-av.me, .seat-av.full { border: 2px solid var(--gold); }
-.seat-av.empty { border: 2px dashed rgba(255, 230, 200, 0.35); color: var(--sub); }
-.seat-name { font-weight: 800; font-size: 15px; overflow: hidden; text-overflow: ellipsis; max-width: 100%; white-space: nowrap; }
-.seat-note { font-size: 12.5px; font-weight: 700; color: var(--sub); display: flex; align-items: center; gap: 5px; }
-.seat-note.ok { color: var(--green); }
-.seat-vs { font-family: var(--display); font-size: 22px; color: var(--sub); margin-top: 26px; }
-.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); display: inline-block; }
 .dots { display: inline-flex; gap: 3px; }
 .dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--sub); animation: blink 1.2s infinite; }
 .dots i:nth-child(2) { animation-delay: 0.2s; } .dots i:nth-child(3) { animation-delay: 0.4s; }
 @keyframes blink { 50% { opacity: 0.25; } }
-.display { margin: 6px 0 0; font-family: var(--display); font-weight: 400; font-size: 34px; line-height: 1.05; }
-.lead { margin: -6px 0 0; font-size: 15.5px; line-height: 1.45; color: var(--sub); font-weight: 500; }
-.linkbox { display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 6px 0 14px; border-radius: 14px; border: 1px solid var(--line2); background: rgba(255, 236, 210, 0.07); color: var(--sub); }
-.linktext { flex: 1; min-width: 0; color: var(--text); font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; user-select: text; -webkit-user-select: text; }
-.list { border-radius: 16px; border: 1px solid var(--line); background: var(--card); overflow: hidden; }
-.list-row { display: flex; justify-content: space-between; align-items: center; height: 46px; padding: 0 14px; border-bottom: 1px solid rgba(255, 230, 200, 0.1); font-size: 14px; }
-.list-row:last-child { border-bottom: 0; }
-.list-row span { color: var(--sub); font-weight: 600; }
 
 /* ---------------------------------------------------------------- oyun yerleşimi */
 .game {

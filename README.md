@@ -1,6 +1,6 @@
 # Tavla
 
-Arkadaşınla online tavla. Siteye girip oyun kurarsın; oyunun **Açık oyunlar** listesine düşer, siteye giren biri listeden katılınca başlarsınız. Link göndermek gerekmez.
+Arkadaşınla online tavla. Siteye girip **Oyun kur** dersin; aynı sayfada kalırsın, oyunun listenin başında “Senin oyunun · rakip bekleniyor” diye görünür. Siteye giren biri listeden katılınca oyun kendiliğinden açılır. **Vazgeç** ile oyununu listeden kaldırırsın. Link göndermek gerekmez.
 
 **Adres:** https://sadrettin86.github.io/tavla/
 

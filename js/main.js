@@ -105,6 +105,7 @@ class App {
     $('#btnTipClose').addEventListener('click', () => { $('#installTip').hidden = true; store.set('ipucu', 1); });
     // açık oyunlar listesi: katıl / izle / devam et
     $('#gameList').addEventListener('click', (e) => {
+      if (e.target.closest('button[data-cancel]')) { this.cancelWaiting(); return; }
       const b = e.target.closest('button[data-room]');
       if (b) this.joinFromList(b.dataset.room);
     });
@@ -115,9 +116,6 @@ class App {
     $('#btnJoinBack').addEventListener('click', () => this.leave());
 
     // bekleme
-    $('#btnToBoard').addEventListener('click', () => this.enterGame());
-    $('#btnCloseRoom').addEventListener('click', () => this.leave());
-    $('#btnRoomBack').addEventListener('click', () => this.leave());
 
     // oyun
     this.stage = $('#stage');
@@ -173,7 +171,7 @@ class App {
       if (!$('#menu').hidden) this.paintMenu();
     });
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible' && document.body.dataset.screen === 'game') this.keepAwake();
+      if (document.visibilityState === 'visible' && (document.body.dataset.screen === 'game' || this.isWaiting())) this.keepAwake();
       if (document.visibilityState === 'visible') this.checkUpdate();
       this.updateTitle();
     });
@@ -249,9 +247,11 @@ class App {
     }
     this.lastLobby = L;
     const now = Date.now(), me = this.me.id;
+    const waiting = this.isWaiting();
     const rows = Object.entries(L)
       .map(([id, e]) => ({ ...e, id, n: onlineCount(e), mine: !!e && (e.wi === me || e.bi === me) }))
-      .filter((e) => validRoomId(e.id) && (e.st === 'open' || e.st === 'play') && (e.n > 0 || e.mine) && now - (e.t || 0) < 12 * 3600e3);
+      .filter((e) => validRoomId(e.id) && (e.st === 'open' || e.st === 'play') && (e.n > 0 || e.mine) && now - (e.t || 0) < 12 * 3600e3)
+      .filter((e) => !(waiting && e.id === this.roomId));
     const byNew = (a, b) => (b.t || 0) - (a.t || 0);
     const open = rows.filter((e) => e.st === 'open').sort(byNew).slice(0, 8);
     const play = rows.filter((e) => e.st === 'play').sort(byNew).slice(0, 6);
@@ -267,6 +267,10 @@ class App {
       return `<li class="game-item${isOpen ? ' open' : ''}${e.mine ? ' mine' : ''}"><span class="gi-av">${av}</span><span class="gi-main"><b>${who}</b><span>${meta}</span></span>${action}</li>`;
     };
     let html = '';
+    if (waiting) {
+      const G = this.G;
+      html += `<li class="game-item mine waiting"><span class="gi-av">${checkerIcon(th, this.myColor, 30, 'glme')}</span><span class="gi-main"><b>Senin oyunun</b><span>${G.match.to} sayı · rakip bekleniyor<span class="dots"><i></i><i></i><i></i></span></span></span><button type="button" class="btn small" data-cancel="1">Vazgeç</button></li>`;
+    }
     if (open.length) html += open.map(item).join('');
     if (play.length) html += `<li class="gl-head">Süren oyunlar</li>` + play.map(item).join('');
     list.innerHTML = html;
@@ -278,6 +282,7 @@ class App {
     if (this.joining || !validRoomId(id)) return;
     const name = this.readName('#name');
     if (!name) return;
+    if (this.room) await this.dropWaiting();
     await this.joinRoom(id, name, (msg) => this.globalToast(msg, 3500));
   }
 
@@ -342,8 +347,9 @@ class App {
     this.sound.unlock();
     const name = this.readName('#name');
     if (!name) return;
-    const btn = $('#btnCreate');
-    btn.disabled = true;
+    if (this.isWaiting()) return;
+    this.creating = true;
+    this.paintCreate();
     try {
       const id = newRoomId();
       this.mode = 'online';
@@ -357,12 +363,14 @@ class App {
       this.syncLobby();
       this.room.lobbyOnline(true);
       lastRoom.set({ id, t: Date.now() });
-      this.showRoom();
+      this.waitInLobby();
+      $('#games').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      this.globalToast('Oyunun listeye eklendi. Biri katılınca oyun açılır.', 3200);
     } catch (e) {
       console.error(e);
       this.globalToast('Oyun kurulamadı. Bağlantını ve Firebase ayarını kontrol et.', 4000);
       this.leave();
-    } finally { btn.disabled = !onlineAvailable(); }
+    } finally { this.creating = false; this.paintCreate(); }
   }
 
   showJoin(id) {
@@ -412,7 +420,7 @@ class App {
       if (G.players.w && G.players.b) {
         this.enterGame();
         if (this.spectator()) FX.toast(this.stage, 'Oyun başlamış, izleyici olarak katıldın', 2800);
-      } else this.showRoom();
+      } else this.waitInLobby();
     } catch (e) {
       console.error(e);
       say('Bağlanılamadı. İnternetini kontrol edip tekrar dene.');
@@ -429,8 +437,9 @@ class App {
     });
   }
 
-  startLocal() {
+  async startLocal() {
     this.sound.unlock();
+    if (this.room) await this.dropWaiting();
     const n = $('#name').value.trim().slice(0, 16);
     if (n) { this.settings.name = n; this.save(); }
     this.mode = 'local';
@@ -460,38 +469,43 @@ class App {
     if (this.wl) { try { this.wl.release(); } catch (e) { /* yok say */ } this.wl = null; }
     this.show('lobby');
     this.paintLobby();
+    if (this.lastLobby) this.paintGames(this.lastLobby);
+    this.paintCreate();
     this.updateTitle();
   }
 
-  showRoom() {
-    this.show('room');
-    this.paintRoom();
+  // Kurduğun oyun giriş sayfasındaki listede bekler; biri katılınca oyun kendiliğinden açılır
+  isWaiting() {
+    const G = this.G;
+    return this.mode === 'online' && !!this.room && !!this.myColor && !!G && !(G.players.w && G.players.b);
   }
 
-  paintRoom() {
-    if (!this.roomId) return;
-    const G = this.G;
-    if (!G) return;
-    const mine = this.myColor || 'w';
-    const me = G.players[mine], them = G.players[other(mine)];
-    $('#seatMe').innerHTML = checkerIcon(G.theme, mine, 52, 'seatme');
-    $('#seatMeName').textContent = me ? me.name : 'Sen';
-    const themEl = $('#seatThem');
-    if (them) {
-      themEl.className = 'seat-av full';
-      themEl.innerHTML = checkerIcon(G.theme, other(mine), 52, 'seatthem');
-      $('#seatThemName').textContent = them.name;
-      $('#seatThemNote').innerHTML = '<i class="dot"></i>Geldi';
-      $('#seatThemNote').className = 'seat-note ok';
-    } else {
-      themEl.className = 'seat-av empty';
-      themEl.innerHTML = icon.user(30);
-      $('#seatThemName').textContent = 'Rakip';
-      $('#seatThemNote').innerHTML = 'bekleniyor <span class="dots"><i></i><i></i><i></i></span>';
-      $('#seatThemNote').className = 'seat-note';
-    }
-    $('#roomTo').textContent = `${G.match.to} sayı`;
-    $('#roomTheme').textContent = THEMES[G.theme].name;
+  waitInLobby() {
+    this.show('lobby');
+    this.paintGames(this.lastLobby || {});
+    this.paintCreate();
+    this.keepAwake();
+  }
+
+  async cancelWaiting() {
+    if (!this.isWaiting()) return;
+    try { await this.room.unpublish(); } catch (e) { /* yok say */ }
+    this.leave();
+    this.globalToast('Oyunun listeden kalktı');
+  }
+
+  // bekleyen oyunu bırak (başka oyuna katılmadan ya da aynı telefonda oynamadan önce)
+  async dropWaiting() {
+    if (!this.room) return;
+    if (this.isWaiting()) { try { await this.room.unpublish(); } catch (e) { /* yok say */ } }
+    this.leave();
+  }
+
+  paintCreate() {
+    const btn = $('#btnCreate');
+    const waiting = this.isWaiting();
+    btn.disabled = waiting || !onlineAvailable() || this.creating;
+    btn.querySelector('.lbl').textContent = waiting ? 'Oyunun listede' : 'Oyun kur';
   }
 
   enterGame() {
@@ -556,14 +570,16 @@ class App {
     this.syncLobby();
     waiters.forEach((f) => f());
     const screen = document.body.dataset.screen;
-    if (screen === 'room') {
-      this.paintRoom();
-      if (G.players.w && G.players.b && prev && !(prev.players.w && prev.players.b)) {
+    if (screen === 'lobby' && this.mode === 'online') {
+      if (this.myColor && G.players.w && G.players.b && prev && !(prev.players.w && prev.players.b)) {
         this.sound.join();
         this.enterGame();
-        FX.toast(this.stage, `${this.nameOf(other(this.myColor || 'w'))} geldi, iyi oyunlar`);
+        FX.toast(this.stage, `${this.nameOf(other(this.myColor))} geldi, iyi oyunlar`);
         return;
       }
+      this.paintGames(this.lastLobby || {});
+      this.paintCreate();
+      return;
     }
     if (screen !== 'game') return;
     const seq = G.seq;
