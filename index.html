@@ -8,7 +8,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Tavla">
-<meta name="description" content="Arkadaşınla online tavla. Link at, oyna.">
+<meta name="description" content="Online tavla. Oyun kur ya da açık bir oyuna katıl.">
+<meta name="tavla-version" content="202611111025">
 <title>Tavla</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -16,7 +17,25 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Ultra&display=swap">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=202611111025">
+<script type="importmap">
+{
+  "imports": {
+    "./js/board.js": "./js/board.js?v=202611111025",
+    "./js/dice.js": "./js/dice.js?v=202611111025",
+    "./js/firebase-config.js": "./js/firebase-config.js?v=202611111025",
+    "./js/fullscreen.js": "./js/fullscreen.js?v=202611111025",
+    "./js/fx.js": "./js/fx.js?v=202611111025",
+    "./js/icons.js": "./js/icons.js?v=202611111025",
+    "./js/main.js": "./js/main.js?v=202611111025",
+    "./js/names.js": "./js/names.js?v=202611111025",
+    "./js/net.js": "./js/net.js?v=202611111025",
+    "./js/rules.js": "./js/rules.js?v=202611111025",
+    "./js/sound.js": "./js/sound.js?v=202611111025",
+    "./js/theme.js": "./js/theme.js?v=202611111025"
+  }
+}
+</script>
 </head>
 <body data-screen="lobby">
 
@@ -75,7 +94,7 @@
   <div class="form-col">
     <header class="brand">
       <div class="brand-row"><span class="logo-slot"></span><h1>Tavla</h1></div>
-      <p class="tagline">Seni bir oyuna çağırdılar.</p>
+      <p class="tagline">Bu oyuna katılmak için adını yaz.</p>
     </header>
     <div class="join-card">
       <span class="label">Oda</span>
@@ -96,17 +115,16 @@
   <div class="form-col">
     <div class="topbar">
       <button type="button" class="icon-btn" id="btnRoomBack" aria-label="Geri"><span class="ic" data-icon="back"></span></button>
-      <div class="topbar-title">Oda</div>
-      <div class="code-chip" id="roomCode">------</div>
+      <div class="topbar-title">Oyun</div>
+      <span class="topbar-gap" aria-hidden="true"></span>
     </div>
     <div class="seats">
       <div class="seat"><div class="seat-av me" id="seatMe"></div><div class="seat-name" id="seatMeName">Sen</div><div class="seat-note ok"><i class="dot"></i>Hazır</div></div>
       <div class="seat-vs">–</div>
-      <div class="seat"><div class="seat-av empty" id="seatThem"><span class="ic" data-icon="user"></span></div><div class="seat-name" id="seatThemName">Arkadaşın</div><div class="seat-note" id="seatThemNote">bekleniyor <span class="dots"><i></i><i></i><i></i></span></div></div>
+      <div class="seat"><div class="seat-av empty" id="seatThem"><span class="ic" data-icon="user"></span></div><div class="seat-name" id="seatThemName">Rakip</div><div class="seat-note" id="seatThemNote">bekleniyor <span class="dots"><i></i><i></i><i></i></span></div></div>
     </div>
     <h2 class="display">Oyun kuruldu</h2>
     <p class="lead">Oyunun açık oyunlar listesinde. Siteye giren biri listeden katılınca oyun başlar.</p>
-    <button type="button" class="btn" id="btnShare"><span class="ic" data-icon="share"></span>İstersen linki gönder</button>
     <div class="list">
       <div class="list-row"><span>Maç</span><b id="roomTo">5 sayı</b></div>
       <div class="list-row"><span>Tahta</span><b id="roomTheme">Ceviz</b></div>
@@ -114,7 +132,7 @@
     </div>
     <div class="row2">
       <button type="button" class="btn" id="btnToBoard">Tahtayı gör</button>
-      <button type="button" class="btn text" id="btnCloseRoom">Odadan çık</button>
+      <button type="button" class="btn text" id="btnCloseRoom">Oyundan çık</button>
     </div>
   </div>
 </section>
@@ -161,7 +179,6 @@
       <p class="menu-tip" id="mFullTip" hidden></p>
       <div class="menu-row static"><span class="ic" data-icon="palette"></span><span>Tahta</span></div>
       <div class="swatches" id="mTheme"></div>
-      <button type="button" class="menu-row" id="mLink"><span class="ic" data-icon="link"></span><span>Oda linkini kopyala</span></button>
       <button type="button" class="menu-row" id="mResign"><span class="ic" data-icon="flag"></span><span>Bu eli bırak</span></button>
       <button type="button" class="menu-row" id="mExit"><span class="ic" data-icon="exit"></span><span>Ana sayfaya dön</span></button>
     </div>
@@ -195,6 +212,6 @@
 
 <div id="globalToast" class="global-toast" role="status" hidden></div>
 
-<script type="module" src="js/main.js"></script>
+<script type="module" src="js/main.js?v=202611111025"></script>
 </body>
 </html>

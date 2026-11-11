@@ -20,6 +20,17 @@ const store = {
   set(k, v) { try { localStorage.setItem('tavla:' + k, JSON.stringify(v)); } catch (e) { /* gizli sekme */ } },
 };
 
+// Bu cihazın en son girdiği oyun (sayfa yenilenince sormadan geri dönmek için).
+// Yerel testte her sekme ayrı oyuncu olduğundan sekmeye özel tutulur.
+const lastRoom = {
+  get() {
+    try { return JSON.parse((testMode() ? sessionStorage : localStorage).getItem('tavla:son')); } catch (e) { return null; }
+  },
+  set(v) {
+    try { (testMode() ? sessionStorage : localStorage).setItem('tavla:son', JSON.stringify(v)); } catch (e) { /* yok say */ }
+  },
+};
+
 function clientId() {
   const make = () => Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, '0')).join('');
   // yerel testte her sekme ayrı oyuncu olsun
@@ -104,7 +115,6 @@ class App {
     $('#btnJoinBack').addEventListener('click', () => this.leave());
 
     // bekleme
-    $('#btnShare').addEventListener('click', () => this.shareLink());
     $('#btnToBoard').addEventListener('click', () => this.enterGame());
     $('#btnCloseRoom').addEventListener('click', () => this.leave());
     $('#btnRoomBack').addEventListener('click', () => this.leave());
@@ -139,7 +149,6 @@ class App {
     });
     $('#mFull').addEventListener('click', () => this.toggleFullscreen());
     this.buildSwatches($('#mTheme'), (k) => this.changeTheme(k));
-    $('#mLink').addEventListener('click', () => { this.copyLink(); $('#menu').hidden = true; });
     $('#mResign').addEventListener('click', () => this.resign());
     $('#mExit').addEventListener('click', async () => {
       $('#menu').hidden = true;
@@ -165,10 +174,31 @@ class App {
     });
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && document.body.dataset.screen === 'game') this.keepAwake();
+      if (document.visibilityState === 'visible') this.checkUpdate();
       this.updateTitle();
     });
     window.addEventListener('hashchange', () => this.route());
     this.route();
+    setTimeout(() => this.checkUpdate(), 3000);
+  }
+
+  // Yeni sürüm yayımlandıysa sayfayı yenile. Ana ekran uygulaması kapanmadan arka planda
+  // beklediği için eski sürüm açık kalabiliyor; uygulamaya dönünce bu kontrol çalışır.
+  async checkUpdate() {
+    const mine = document.querySelector('meta[name="tavla-version"]');
+    if (testMode() || !mine || this.mode === 'local' || this.checkingUpdate) return;
+    this.checkingUpdate = true;
+    try {
+      const r = await fetch(`version.json?t=${Date.now()}`, { cache: 'no-store' });
+      const v = r.ok ? (await r.json()).v : null;
+      if (!v || v === mine.content) return;
+      // aynı sürüm için en fazla 11 dakikada bir dene (önbellek eski sayfayı verirse döngüye girmesin)
+      let last = {};
+      try { last = JSON.parse(sessionStorage.getItem('tavla:yenileme') || '{}'); } catch (e) { /* yok say */ }
+      if (last.v === v && Date.now() - last.t < 11 * 60e3) return;
+      sessionStorage.setItem('tavla:yenileme', JSON.stringify({ v, t: Date.now() }));
+      location.reload();
+    } catch (e) { /* çevrimdışı: sonra yine bakılır */ } finally { this.checkingUpdate = false; }
   }
 
   route() {
@@ -176,6 +206,9 @@ class App {
     if (validRoomId(id)) {
       if (this.room && this.roomId === id) return;
       this.showJoin(id);
+      // bu cihaz bu oyundaydı (ör. sayfa yenilendi ya da yeni sürüm geldi): sormadan geri dön
+      const son = lastRoom.get();
+      if (son && son.id === id && Date.now() - son.t < 24 * 3600e3 && this.settings.name) this.joinRoom(id, this.settings.name);
     } else if (!this.room) {
       this.show('lobby');
     }
@@ -323,6 +356,7 @@ class App {
       await this.waitState(5000);
       this.syncLobby();
       this.room.lobbyOnline(true);
+      lastRoom.set({ id, t: Date.now() });
       this.showRoom();
     } catch (e) {
       console.error(e);
@@ -374,6 +408,7 @@ class App {
       this.room.setPresence({ name, color: this.myColor || '' });
       history.replaceState(null, '', location.pathname + location.search + '#' + id);
       if (this.myColor) { this.syncLobby(); this.room.lobbyOnline(true); }
+      lastRoom.set({ id, t: Date.now() });
       if (G.players.w && G.players.b) {
         this.enterGame();
         if (this.spectator()) FX.toast(this.stage, 'Oyun başlamış, izleyici olarak katıldın', 2800);
@@ -413,6 +448,7 @@ class App {
   leave() {
     if (this.room) { try { this.room.close(); } catch (e) { /* yok say */ } }
     this.lobbyKey = null;
+    lastRoom.set(null);
     this.room = null; this.G = null; this.mode = null; this.myColor = null; this.roomId = null;
     this.presence = {}; this.sel = null; this.dests = null; this.oppOnline = null;
     this.openShown = { w: 0, b: 0 };
@@ -427,22 +463,6 @@ class App {
     this.updateTitle();
   }
 
-  link() { return location.origin + location.pathname + location.search + '#' + this.roomId; }
-
-  async copyLink() {
-    try { await navigator.clipboard.writeText(this.link()); this.globalToast('Link kopyalandı'); }
-    catch (e) { this.globalToast(this.link(), 5000); }
-  }
-
-  async shareLink() {
-    this.sound.unlock();
-    if (navigator.share) {
-      try { await navigator.share({ title: 'Tavla', text: 'Tavla oynayalım mı? Linke tıkla, karşıma otur.', url: this.link() }); return; }
-      catch (e) { if (e && e.name === 'AbortError') return; }
-    }
-    this.copyLink();
-  }
-
   showRoom() {
     this.show('room');
     this.paintRoom();
@@ -450,7 +470,6 @@ class App {
 
   paintRoom() {
     if (!this.roomId) return;
-    $('#roomCode').textContent = this.roomId;
     const G = this.G;
     if (!G) return;
     const mine = this.myColor || 'w';
@@ -467,7 +486,7 @@ class App {
     } else {
       themEl.className = 'seat-av empty';
       themEl.innerHTML = icon.user(30);
-      $('#seatThemName').textContent = 'Arkadaşın';
+      $('#seatThemName').textContent = 'Rakip';
       $('#seatThemNote').innerHTML = 'bekleniyor <span class="dots"><i></i><i></i><i></i></span>';
       $('#seatThemNote').className = 'seat-note';
     }
@@ -1036,7 +1055,6 @@ class App {
   openMenu() {
     $('#mFullTip').hidden = true;
     this.paintMenu();
-    $('#mLink').hidden = this.mode !== 'online';
     $('#mResign').hidden = this.spectator();
     $('#menu').hidden = false;
   }

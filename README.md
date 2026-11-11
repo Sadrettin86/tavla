@@ -1,6 +1,6 @@
 # Tavla
 
-Arkadaşınla online tavla. Siteye girip oyun kurarsın; oyunun **Açık oyunlar** listesine düşer, siteye giren biri listeden katılınca başlarsınız. Link göndermek gerekmez (istersen yine gönderebilirsin).
+Arkadaşınla online tavla. Siteye girip oyun kurarsın; oyunun **Açık oyunlar** listesine düşer, siteye giren biri listeden katılınca başlarsınız. Link göndermek gerekmez.
 
 **Adres:** https://sadrettin86.github.io/tavla/
 
@@ -59,11 +59,13 @@ python3 -m http.server 8000
 
 Tarayıcıda `http://localhost:8000/?yerel` adresini aç. `?yerel` ile oda, Firebase yerine aynı tarayıcıdaki sekmeler arasında kurulur; iki sekmeyle online akışı deneyebilirsin.
 
-Kural testleri:
+Testler:
 
 ```
-node tests/rules.test.mjs
+npm test
 ```
+
+**Yayından önce:** `node tools/surum.mjs` çalıştır. Sürüm damgasını `index.html` ve `version.json` dosyalarına yazar. Açık kalmış telefonlar (ör. ana ekran uygulaması) uygulamaya dönünce yeni sürümü görüp kendini yeniler; dosyalar da sürümlü yüklendiği için eski ve yeni dosyalar karışmaz.
 
 ## Dosyalar
 

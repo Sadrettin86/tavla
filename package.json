@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node tests/rules.test.mjs"
+    "test": "node tests/rules.test.mjs && node tests/version.test.mjs",
+    "surum": "node tools/surum.mjs"
   }
 }

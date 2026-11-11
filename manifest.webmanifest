@@ -1,7 +1,7 @@
 {
   "name": "Tavla",
   "short_name": "Tavla",
-  "description": "Arkadaşınla online tavla",
+  "description": "Online tavla: oyun kur ya da açık bir oyuna katıl",
   "lang": "tr",
   "start_url": "./",
   "scope": "./",
