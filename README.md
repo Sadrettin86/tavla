@@ -6,13 +6,12 @@ Arkadaşınla online tavla. Siteye girip **Oyun kur** dersin; aynı sayfada kal�
 
 ## Neler var
 
-- Ahşap tahta (Ceviz, Sedefli, Gece temaları); zarlar havada döner, düz oturur
+- Ceviz ahşap tahta; 5 sayılık maç; zarlar havada döner, düz oturur
 - Efektler: çift gelince büyük yazı (DÜŞEŞ!, DUBARA!…), pul kırınca vuruş, mars damgası, konfeti
 - Sesler kodla üretilir, ses dosyası yok. Zar adları telefonun Türkçe sesiyle okunur (Şeşbeş, Düşeş…)
 - Laf atma butonları ve tepkiler (çay, alev, kahkaha…)
 - Pullar yay çizerek uçar, iz bırakır, yere oturur; kırılan pul havada takla atar; geri alınan hamle geri uçar; yeni elde pullar tahtaya dağıtılır
-- Açık oyunlar listesi: rakip bekleyen oyunlara **Katıl**, süren oyunları **İzle**; isimler listede görünür, kendi oyununa **Devam et** ile dönersin
-- Aynı telefonda iki kişi oynama
+- Açık oyunlar listesi: rakip bekleyen oyunlara **Katıl**, süren oyunları **İzle**; isimler listede görünür, kendi oyununa yine **Katıl** ile dönersin
 - Oyun başladıktan sonra odaya gelen herkes izleyici olur
 - Telefon kilitlenip açılınca ya da sayfa yenilenince oyun kaldığı yerden devam eder
 
@@ -49,7 +48,7 @@ Bu ayar değerleri gizli değildir, sitenin kodunda görünmeleri normaldir. Ver
 
 **Kurallar güncellendiğinde:** `database.rules.json` değişince (ör. açık oyunlar listesi eklenince) içeriğini yeniden **Realtime Database › Rules** sekmesine yapıştırıp **Publish** demek gerekir. Yapılmazsa giriş ekranında “Oyun listesi şu an açılamadı” yazar; link ile oyun yine çalışır.
 
-Firebase ayarı yokken site açılır, “Aynı telefonda” modu çalışır; “Oyun kur” düğmesi kapalı kalır.
+Firebase ayarı yokken site açılır ama “Oyun kur” düğmesi kapalı kalır.
 
 ## Yerelde deneme
 

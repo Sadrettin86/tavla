@@ -53,7 +53,7 @@ function themeSwatch(k) {
 class App {
   constructor() {
     const s = store.get('ayar', {});
-    this.settings = { name: s.name || '', to: s.to || 5, theme: THEMES[s.theme] ? s.theme : 'ceviz', sound: s.sound !== false, voice: s.voice !== false };
+    this.settings = { name: s.name || '', to: 5, theme: 'ceviz', sound: s.sound !== false, voice: s.voice !== false };
     this.sound = new Sound();
     this.sound.enabled = this.settings.sound;
     this.sound.voice = this.settings.voice;
@@ -87,14 +87,11 @@ class App {
     const name = $('#name');
     name.value = this.settings.name;
     name.addEventListener('change', () => { this.settings.name = name.value.trim(); this.save(); });
-    document.querySelectorAll('#segTo button').forEach((b) => b.addEventListener('click', () => { this.settings.to = +b.dataset.to; this.save(); this.paintLobby(); }));
-    this.buildSwatches($('#segTheme'), (k) => { this.settings.theme = k; this.save(); this.paintLobby(); });
     $('#btnCreate').addEventListener('click', () => this.createRoom());
-    $('#btnLocal').addEventListener('click', () => this.startLocal());
     if (!onlineAvailable()) {
       const n = $('#fbNotice');
       n.hidden = false;
-      n.innerHTML = 'Online oyun için Firebase ayarı henüz yapılmamış. Adımlar <a href="https://github.com/Sadrettin86/tavla#kurulum" target="_blank" rel="noopener">kurulum notunda</a>. Şimdilik “Aynı telefonda” oynayabilirsin.';
+      n.innerHTML = 'Online oyun için Firebase ayarı henüz yapılmamış. Adımlar <a href="https://github.com/Sadrettin86/tavla#kurulum" target="_blank" rel="noopener">kurulum notunda</a>.';
       $('#btnCreate').disabled = true;
     }
     this.paintLobby();
@@ -148,7 +145,6 @@ class App {
       if (this.settings.voice) this.sound.say('Şeşbeş');
     });
     $('#mFull').addEventListener('click', () => this.toggleFullscreen());
-    this.buildSwatches($('#mTheme'), (k) => this.changeTheme(k));
     $('#mResign').addEventListener('click', () => this.resign());
     $('#mExit').addEventListener('click', async () => {
       $('#menu').hidden = true;
@@ -275,7 +271,7 @@ class App {
       const who = isOpen ? esc(e.host || e.w || 'Oyuncu') : `${esc(e.w || '?')} <i>–</i> ${esc(e.b || '?')}`;
       const meta = `${e.to || 5} sayılık maç · ${isOpen ? ago(e.t) : 'oynanıyor'}`;
       const av = isOpen ? checkerIcon(th, 'w', 30, 'gl' + e.id) : `<span class="gi-pair">${checkerIcon(th, 'w', 24, 'glw' + e.id)}${checkerIcon(th, 'b', 24, 'glb' + e.id)}</span>`;
-      const action = e.mine ? btn(e, 'Devam et', 'primary') : isOpen ? btn(e, 'Katıl', 'primary') : btn(e, 'İzle', '', icon.eye(16));
+      const action = e.mine ? btn(e, 'Katıl', 'primary') : isOpen ? btn(e, 'Katıl', 'primary') : btn(e, 'İzle', '', icon.eye(16));
       const del = isOpen ? `<button type="button" class="gi-del" data-del="${e.id}" data-who="${esc(e.host || e.w || 'Oyuncu')}" aria-label="Oyunu sil">${icon.trash(18)}</button>` : '';
       return `<li class="game-item${isOpen ? ' open' : ''}${e.mine ? ' mine' : ''}"><span class="gi-av">${av}</span><span class="gi-main"><b>${who}</b><span>${meta}</span></span>${action}${del}</li>`;
     };
@@ -319,8 +315,6 @@ class App {
   }
 
   paintLobby() {
-    document.querySelectorAll('#segTo button').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.to === this.settings.to)));
-    document.querySelectorAll('#segTheme button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.theme === this.settings.theme)));
     const start = Rules.initialBoard();
     const pos = { pts: {}, bar: {}, off: {} };
     for (let a = 1; a <= 24; a++) if (start.p[a]) pos.pts[a] = [start.p[a] > 0 ? 'w' : 'b', Math.abs(start.p[a])];
@@ -1099,8 +1093,6 @@ class App {
     $('#mFull').hidden = FS.standalone() || (!FS.supported() && !FS.IOS);
     $('#mFullVal').textContent = FS.supported() ? (FS.active() ? 'Açık' : 'Kapalı') : 'Nasıl?';
     $('#mVoiceVal').textContent = this.settings.voice ? 'Açık' : 'Kapalı';
-    const cur = this.G ? this.G.theme : this.settings.theme;
-    document.querySelectorAll('#mTheme button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.theme === cur)));
   }
 
   toggleSound() {

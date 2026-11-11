@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Tavla">
 <meta name="description" content="Online tavla. Oyun kur ya da açık bir oyuna katıl.">
-<meta name="tavla-version" content="202611111047">
+<meta name="tavla-version" content="202611111100">
 <title>Tavla</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -17,22 +17,22 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Ultra&display=swap">
-<link rel="stylesheet" href="css/style.css?v=202611111047">
+<link rel="stylesheet" href="css/style.css?v=202611111100">
 <script type="importmap">
 {
   "imports": {
-    "./js/board.js": "./js/board.js?v=202611111047",
-    "./js/dice.js": "./js/dice.js?v=202611111047",
-    "./js/firebase-config.js": "./js/firebase-config.js?v=202611111047",
-    "./js/fullscreen.js": "./js/fullscreen.js?v=202611111047",
-    "./js/fx.js": "./js/fx.js?v=202611111047",
-    "./js/icons.js": "./js/icons.js?v=202611111047",
-    "./js/main.js": "./js/main.js?v=202611111047",
-    "./js/names.js": "./js/names.js?v=202611111047",
-    "./js/net.js": "./js/net.js?v=202611111047",
-    "./js/rules.js": "./js/rules.js?v=202611111047",
-    "./js/sound.js": "./js/sound.js?v=202611111047",
-    "./js/theme.js": "./js/theme.js?v=202611111047"
+    "./js/board.js": "./js/board.js?v=202611111100",
+    "./js/dice.js": "./js/dice.js?v=202611111100",
+    "./js/firebase-config.js": "./js/firebase-config.js?v=202611111100",
+    "./js/fullscreen.js": "./js/fullscreen.js?v=202611111100",
+    "./js/fx.js": "./js/fx.js?v=202611111100",
+    "./js/icons.js": "./js/icons.js?v=202611111100",
+    "./js/main.js": "./js/main.js?v=202611111100",
+    "./js/names.js": "./js/names.js?v=202611111100",
+    "./js/net.js": "./js/net.js?v=202611111100",
+    "./js/rules.js": "./js/rules.js?v=202611111100",
+    "./js/sound.js": "./js/sound.js?v=202611111100",
+    "./js/theme.js": "./js/theme.js?v=202611111100"
   }
 }
 </script>
@@ -64,27 +64,8 @@
         <ul class="game-list" id="gameList"></ul>
         <p class="games-empty" id="gamesEmpty">Oyunlar yükleniyor…</p>
       </section>
-      <div class="new-game-head"><span class="label">Yeni oyun</span></div>
-      <div class="field">
-        <span class="label" id="lblTo">Maç kaç sayıya?</span>
-        <div class="seg" role="group" aria-labelledby="lblTo" id="segTo">
-          <button type="button" data-to="1">1</button>
-          <button type="button" data-to="3">3</button>
-          <button type="button" data-to="5">5</button>
-          <button type="button" data-to="7">7</button>
-        </div>
-      </div>
-      <div class="field">
-        <span class="label" id="lblTheme">Tahta</span>
-        <div class="swatches" role="group" aria-labelledby="lblTheme" id="segTheme"></div>
-      </div>
       <p class="notice" id="fbNotice" hidden></p>
       <button type="button" class="btn primary big" id="btnCreate"><span class="ic" data-icon="dice"></span><span class="lbl">Oyun kur</span></button>
-      <div class="row2">
-        <button type="button" class="btn" id="btnLocal">Aynı telefonda</button>
-        <button type="button" class="btn ghost" id="btnBot" disabled>Bota karşı <span class="tag">Yakında</span></button>
-      </div>
-      <p class="foot">Türk tavlası kurallarıyla: mars 2 sayı, açılışta büyük atan zarı yeniden atar.</p>
     </div>
   </div>
 </section>
@@ -150,8 +131,6 @@
       <button type="button" class="menu-row" id="mVoice"><span class="ic" data-icon="voice"></span><span>Zar anonsu</span><b id="mVoiceVal">Açık</b></button>
       <button type="button" class="menu-row" id="mFull"><span class="ic" data-icon="expand"></span><span>Tam ekran</span><b id="mFullVal">Kapalı</b></button>
       <p class="menu-tip" id="mFullTip" hidden></p>
-      <div class="menu-row static"><span class="ic" data-icon="palette"></span><span>Tahta</span></div>
-      <div class="swatches" id="mTheme"></div>
       <button type="button" class="menu-row" id="mResign"><span class="ic" data-icon="flag"></span><span>Bu eli bırak</span></button>
       <button type="button" class="menu-row" id="mExit"><span class="ic" data-icon="exit"></span><span>Ana sayfaya dön</span></button>
     </div>
@@ -188,6 +167,6 @@
 
 <div id="globalToast" class="global-toast" role="status" hidden></div>
 
-<script type="module" src="js/main.js?v=202611111047"></script>
+<script type="module" src="js/main.js?v=202611111100"></script>
 </body>
 </html>
