@@ -47,6 +47,14 @@ export async function watchLobby(cb, onErr) {
   return D.onValue(q, (snap) => cb(snap.val() || {}), (e) => onErr && onErr(e));
 }
 
+// Listeden bir oyunu kaldır (herkes kaldırabilir)
+export async function removeLobbyEntry(id) {
+  if (testMode()) { writeLocalLobby((L) => { delete L[id]; }); return; }
+  if (!firebaseReady()) return;
+  const { D, db } = await loadFirebase();
+  await D.remove(D.ref(db, `lobby/${id}`));
+}
+
 export async function connectRoom(id, me, handlers) {
   if (testMode()) return new LocalRoom(id, me, handlers);
   if (!firebaseReady()) throw new Error('firebase-ayari-yok');
@@ -68,6 +76,7 @@ export class OfflineRoom {
   setPresence() {}
   sendChat() {}
   publish() {}
+  unpublish() {}
   lobbyOnline() {}
   close() {}
 }
@@ -125,6 +134,8 @@ class FirebaseRoom {
   }
 
   // açık oyunlar listesindeki kayıt
+  unpublish() { return this.D.remove(this.lobbyRef).catch(() => {}); }
+
   publish(info) {
     return this.D.update(this.lobbyRef, { ...info, t: this.D.serverTimestamp() }).catch(() => {});
   }
@@ -195,6 +206,7 @@ class LocalRoom {
     this.h.onPresence(o);
   }
   setPresence(p) { Object.assign(this.me, p); this.beat(); }
+  unpublish() { writeLocalLobby((L) => { delete L[this.id]; }); }
   publish(info) { writeLocalLobby((L) => { L[this.id] = { ...(L[this.id] || {}), ...info, t: Date.now() }; }); }
   lobbyOnline(on) {
     this.lobbyOn = on;

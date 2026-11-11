@@ -6,7 +6,7 @@ import * as FX from './fx.js';
 import * as FS from './fullscreen.js';
 import { icon, logoDice } from './icons.js';
 import { diceName, upperTR, PHRASES, REACTIONS } from './names.js';
-import { connectRoom, OfflineRoom, newRoomId, validRoomId, onlineAvailable, testMode, watchLobby, onlineCount } from './net.js';
+import { connectRoom, OfflineRoom, newRoomId, validRoomId, onlineAvailable, testMode, watchLobby, onlineCount, removeLobbyEntry } from './net.js';
 import { THEMES, tableBG, checkerIcon, renderBoard } from './theme.js';
 
 const $ = (s) => document.querySelector(s);
@@ -106,6 +106,8 @@ class App {
     // açık oyunlar listesi: katıl / izle / devam et
     $('#gameList').addEventListener('click', (e) => {
       if (e.target.closest('button[data-cancel]')) { this.cancelWaiting(); return; }
+      const del = e.target.closest('button[data-del]');
+      if (del) { this.deleteGame(del.dataset.del, del.dataset.who); return; }
       const b = e.target.closest('button[data-room]');
       if (b) this.joinFromList(b.dataset.room);
     });
@@ -247,7 +249,17 @@ class App {
     }
     this.lastLobby = L;
     const now = Date.now(), me = this.me.id;
-    const waiting = this.isWaiting();
+    let waiting = this.isWaiting();
+    if (waiting && this.roomId) {
+      if (L[this.roomId]) this.waitSeen = this.roomId;
+      else if (this.waitSeen === this.roomId) {
+        // listede görünmüştü, şimdi yok: biri sildi
+        this.waitSeen = null;
+        this.leave();
+        this.globalToast('Oyunun listeden silindi', 3200);
+        return;
+      }
+    }
     const rows = Object.entries(L)
       .map(([id, e]) => ({ ...e, id, n: onlineCount(e), mine: !!e && (e.wi === me || e.bi === me) }))
       .filter((e) => validRoomId(e.id) && (e.st === 'open' || e.st === 'play') && (e.n > 0 || e.mine) && now - (e.t || 0) < 12 * 3600e3)
@@ -264,7 +276,8 @@ class App {
       const meta = `${e.to || 5} sayılık maç · ${isOpen ? ago(e.t) : 'oynanıyor'}`;
       const av = isOpen ? checkerIcon(th, 'w', 30, 'gl' + e.id) : `<span class="gi-pair">${checkerIcon(th, 'w', 24, 'glw' + e.id)}${checkerIcon(th, 'b', 24, 'glb' + e.id)}</span>`;
       const action = e.mine ? btn(e, 'Devam et', 'primary') : isOpen ? btn(e, 'Katıl', 'primary') : btn(e, 'İzle', '', icon.eye(16));
-      return `<li class="game-item${isOpen ? ' open' : ''}${e.mine ? ' mine' : ''}"><span class="gi-av">${av}</span><span class="gi-main"><b>${who}</b><span>${meta}</span></span>${action}</li>`;
+      const del = isOpen ? `<button type="button" class="gi-del" data-del="${e.id}" data-who="${esc(e.host || e.w || 'Oyuncu')}" aria-label="Oyunu sil">${icon.trash(18)}</button>` : '';
+      return `<li class="game-item${isOpen ? ' open' : ''}${e.mine ? ' mine' : ''}"><span class="gi-av">${av}</span><span class="gi-main"><b>${who}</b><span>${meta}</span></span>${action}${del}</li>`;
     };
     let html = '';
     if (waiting) {
@@ -485,6 +498,12 @@ class App {
     this.paintGames(this.lastLobby || {});
     this.paintCreate();
     this.keepAwake();
+  }
+
+  async deleteGame(id, who) {
+    if (!(await this.confirm(`${who} oyununu listeden silmek istiyor musun?`))) return;
+    try { await removeLobbyEntry(id); this.globalToast('Oyun silindi'); }
+    catch (e) { this.globalToast('Silinemedi, tekrar dene'); }
   }
 
   async cancelWaiting() {
