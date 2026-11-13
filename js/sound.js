@@ -29,7 +29,7 @@ export class Sound {
     this.trVoice = null;
     this.speechReady = false;
     this.silentEl = null;
-    this.ambLevel = 0.45;
+    this.ambLevel = 0.22;
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) { if (this.silentEl) this.silentEl.pause(); return; }
       if (this.ctx && this.ctx.state !== 'running' && this._enabled) this.ctx.resume().catch(() => {});
