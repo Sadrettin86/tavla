@@ -173,14 +173,16 @@ class App {
       if (document.visibilityState === 'visible') this.checkUpdate();
       this.updateTitle();
     });
-    // gizli yardım: oyunda kendi ad kartına 1 saniye basılı tut
-    {
-      const card = $('#cardBottom');
+    // gizli yardım: kendi kartına 1 sn bas → rakibe yardım; rakibin kartına bas → sana yardım
+    for (const [sel, mine] of [['#cardBottom', true], ['#cardTop', false]]) {
+      const card = $(sel);
       let tm = null;
       const stop = () => { clearTimeout(tm); tm = null; };
-      card.addEventListener('pointerdown', () => { stop(); tm = setTimeout(() => { tm = null; this.openAssist(); }, 1000); });
+      card.addEventListener('pointerdown', () => { stop(); tm = setTimeout(() => { tm = null; this.openAssist(mine); }, 1000); });
       for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) card.addEventListener(ev, stop);
       card.addEventListener('contextmenu', (e) => e.preventDefault());
+    }
+    {
       $('#assist').addEventListener('click', (e) => {
         const b = e.target.closest('button[data-lvl]');
         if (b) { this.setAssist(+b.dataset.lvl); return; }
@@ -508,24 +510,25 @@ class App {
     this.keepAwake();
   }
 
-  openAssist() {
+  // ownCard: kendi kartına basıldı → yardım rakibe; rakibin kartına basıldı → yardım sana
+  openAssist(ownCard) {
     const G = this.G;
     if (!G || !this.myColor || this.mode !== 'online' || !(G.players.w && G.players.b)) return;
-    const opp = G.players[other(this.myColor)];
-    $('#assistWho').textContent = opp ? opp.name : 'Rakip';
+    this.assistTo = ownCard ? other(this.myColor) : this.myColor;
+    $('#assistWho').textContent = ownCard ? `${G.players[this.assistTo].name} adlı rakibinin zarları` : 'senin zarların';
     this.paintAssist();
     $('#assist').hidden = false;
   }
 
   paintAssist() {
     const A = this.G && this.G.assist;
-    const lvl = A && A.to === other(this.myColor) ? A.lvl : 0;
+    const lvl = A && A.to === this.assistTo ? A.lvl : 0;
     document.querySelectorAll('#assist button[data-lvl]').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.lvl === lvl)));
   }
 
   async setAssist(lvl) {
     if (!this.myColor) return;
-    await this.act((S) => Rules.setAssist(S, this.myColor, lvl));
+    await this.act((S) => Rules.setAssist(S, this.assistTo, lvl));
     this.paintAssist();
     setTimeout(() => { $('#assist').hidden = true; }, 250);
   }

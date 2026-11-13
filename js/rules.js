@@ -261,9 +261,9 @@ export function roll(G0, c, d1, d2) {
 // ------------------------------------------------------------------ gizli zar yardımı
 // G.assist = { to: 'w'|'b', lvl: 1|2 }: "to" oyuncusunun zarları hafifçe iyileştirilir.
 // Hafif: atışların yarısında iki atıştan iyisi. Güçlü: her atışta üç atıştan iyisi.
-export function setAssist(G0, by, lvl) {
+export function setAssist(G0, to, lvl) {
   const G = copy(G0);
-  G.assist = lvl ? { to: other(by), lvl } : null;
+  G.assist = lvl ? { to, lvl } : (G.assist && G.assist.to !== to ? G.assist : null);
   G.seq += 1; // günlüğe yazılmaz, karşı tarafta animasyon ya da yazı çıkmaz
   return G;
 }
