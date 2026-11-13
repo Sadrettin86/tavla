@@ -286,14 +286,15 @@ export class BoardView {
 
   // Bir pulu yay çizerek uçur: büyüyerek havalanır, gölgesi ayrılıp açılır, arkasında iz bırakır.
   // flips: havada takla (kırılan pul için)
-  fly(e, x1, y1, { dur, h, lift = 1.32, trail = true, end = 'land', start = 'flat', flips = 0, bend = 'center' } = {}) {
+  fly(e, x1, y1, { dur, h, lift = 1.32, trail = true, end = 'land', start = 'flat', flips = 0, bend = 'center', streak = null, tilt = true } = {}) {
     const easing = 'cubic-bezier(.33,.06,.3,1)';
-    if (reducedMotion()) { trail = false; flips = 0; }
+    if (reducedMotion()) { trail = false; flips = 0; streak = null; tilt = false; }
     const kf = this.arcFrames(e._x, e._y, x1, y1, { h, lift, end, start, bend });
+    if (streak) this.streak(e._x, e._y, x1, y1, h, bend, streak, dur, easing);
     e.classList.remove('sel');
     this.lChk.appendChild(e);
     if (trail) {
-      for (const [k, op] of [[1, 0.38], [2, 0.27], [3, 0.18], [4, 0.1], [5, 0.05]]) {
+      for (const [k, op] of [[1, 0.42], [2, 0.32], [3, 0.24], [4, 0.17], [5, 0.11], [6, 0.07], [7, 0.04]]) {
         const gh = e.cloneNode(true);
         gh.classList.add('ghost');
         const gs = gh.querySelector('.shw');
@@ -320,6 +321,17 @@ export class BoardView {
       for (let i = 0; i <= n; i++) fk.push({ transform: `scale(${Math.cos((2 * Math.PI * flips * i) / n).toFixed(3)}, 1)`, offset: +((i / n) * 0.84).toFixed(4) });
       fk.push({ transform: 'scale(1, 1)', offset: 1 });
       if (ci) ci.animate(fk, { duration: dur, easing });
+    } else if (tilt && end !== 'slab') {
+      // havada hafifçe yan yatar, sonra düzelir
+      const ci = e.querySelector('.ci');
+      const sx = 0.8 + Math.random() * 0.06;
+      if (ci) ci.animate([
+        { transform: 'scale(1, 1)' },
+        { transform: `scale(${sx}, 1.02)`, offset: 0.3 },
+        { transform: 'scale(1.03, 0.86)', offset: 0.6 },
+        { transform: 'scale(1, 1)', offset: 0.84 },
+        { transform: 'scale(1, 1)' },
+      ], { duration: dur, easing });
     }
     // son konum önce yazılır; animasyon bitince sıçrama olmaz
     if (end === 'slab') { e.style.transform = `translate(${F(x1)}px, ${F(y1)}px) scale(1, 0.32)`; e._x = x1; e._y = y1; }
@@ -358,6 +370,61 @@ export class BoardView {
     const k = strength ? [{ transform: 'scale(1)' }, { transform: 'scale(1.07, 0.9)', offset: 0.3 }, { transform: 'scale(0.98, 1.03)', offset: 0.65 }, { transform: 'scale(1)' }]
       : [{ transform: 'scale(1)' }, { transform: 'scale(1.04)', offset: 0.4 }, { transform: 'scale(1)' }];
     ci.animate(k, { duration: strength ? 320 : 240, easing: 'ease-out' });
+  }
+
+  // Kalkıştan önce pul hafifçe çöker (hazırlanma)
+  crouch(e, ms = 110) {
+    if (!e || reducedMotion()) return Promise.resolve();
+    const ci = e.querySelector('.ci');
+    if (!ci) return Promise.resolve();
+    return ci.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.1, 0.84)', offset: 0.7 }, { transform: 'scale(1.06, 0.9)' }], { duration: ms, easing: 'ease-in' }).finished.catch(() => {});
+  }
+
+  // Uçuş yolunda pulu izleyen, sonra sönen ışık izi
+  streak(x0, y0, x1, y1, h, bend, color, dur, easing) {
+    const { cx, cy } = this.arcCtrl(x0, y0, x1, y1, h, bend);
+    const r = this.g.r;
+    const path = el('path', { d: `M${F(x0)} ${F(y0)} Q${F(cx)} ${F(cy)} ${F(x1)} ${F(y1)}`, fill: 'none', stroke: color, 'stroke-width': F(r * 0.95), 'stroke-linecap': 'round', pathLength: '1', 'stroke-dasharray': '1 1', 'stroke-opacity': '0.28' });
+    const core = el('path', { d: path.getAttribute('d'), fill: 'none', stroke: '#fff', 'stroke-width': F(r * 0.28), 'stroke-linecap': 'round', pathLength: '1', 'stroke-dasharray': '1 1', 'stroke-opacity': '0.5' });
+    const g = el('g', { class: 'streak' });
+    g.appendChild(path); g.appendChild(core);
+    this.lUnder.appendChild(g);
+    for (const p of [path, core]) p.animate([{ strokeDashoffset: 1 }, { strokeDashoffset: 0, offset: 0.84 }, { strokeDashoffset: 0 }], { duration: dur, easing, fill: 'forwards' });
+    g.animate([{ opacity: 1 }, { opacity: 1, offset: 0.7 }, { opacity: 0 }], { duration: dur + 380, fill: 'forwards' }).finished.then(() => g.remove(), () => g.remove());
+  }
+
+  // Tahta sarsılır
+  shake(power = 1) {
+    if (reducedMotion()) return;
+    const k = [0, -4, 3.5, -2.5, 1.6, -0.8, 0].map((v, i) => ({ transform: `translate(${(v * power).toFixed(2)}px, ${((i % 2 ? 1.6 : -1.2) * power * (i < 6 ? 1 : 0)).toFixed(2)}px)` }));
+    this.svg.animate(k, { duration: 360, easing: 'ease-out' });
+  }
+
+  // Kırılma anı: parlama, kıymıklar
+  smash(x, y, color) {
+    if (!this.T || reducedMotion()) return;
+    const r = this.g.r;
+    const g = el('g', { transform: `translate(${F(x)} ${F(y)})` });
+    this.lFx.appendChild(g);
+    const flash = el('circle', { r: F(r * 1.1), fill: '#fff' });
+    g.appendChild(flash);
+    flash.animate([{ transform: 'scale(0.5)', opacity: 0.95 }, { transform: 'scale(2.4)', opacity: 0 }], { duration: 300, easing: 'ease-out', fill: 'forwards' });
+    const vc = this.T[color] || {};
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * Math.PI * 2 + Math.random() * 0.5;
+      const s = r * (0.22 + Math.random() * 0.22);
+      const sh = el('polygon', { points: `0,${F(-s)} ${F(s * 0.8)},${F(s * 0.6)} ${F(-s * 0.7)},${F(s * 0.5)}`, fill: i % 3 ? (vc.base || '#fff') : this.T.danger, stroke: vc.rim || '#0006', 'stroke-width': '0.5' });
+      g.appendChild(sh);
+      const d = r * (1.8 + Math.random() * 1.8);
+      const dx = Math.cos(a) * d, dy = Math.sin(a) * d;
+      const rot = (Math.random() < 0.5 ? -1 : 1) * (180 + Math.random() * 360);
+      sh.animate([
+        { transform: 'translate(0px, 0px) rotate(0deg) scale(1)', opacity: 1 },
+        { transform: `translate(${F(dx * 0.7)}px, ${F(dy * 0.7 - r * 0.6)}px) rotate(${F(rot * 0.6)}deg) scale(1)`, opacity: 1, offset: 0.45 },
+        { transform: `translate(${F(dx)}px, ${F(dy + r * 0.9)}px) rotate(${F(rot)}deg) scale(0.4)`, opacity: 0 },
+      ], { duration: 620 + Math.random() * 260, easing: 'cubic-bezier(.2,.6,.4,1)', fill: 'forwards' });
+    }
+    setTimeout(() => g.remove(), 1000);
   }
 
   // İnişte etrafa saçılan küçük kıvılcımlar
@@ -401,24 +468,33 @@ export class BoardView {
     this.nudge(src[src.length - 2], 0);
     // inerken: hedefteki kendi pulu çarpmayı hisseder
     const destStack = m.to === 'off' ? [] : (this.stacks['p' + m.to] || []);
-    const under = !m.hit && destStack.length ? destStack[destStack.length - 1] : null;
     const victim = m.hit ? this.topOf('p' + m.to) : null;
+    // kalkmadan önce hafif çöküş
+    await this.crouch(e);
     let hitDone = Promise.resolve();
     if (victim) {
       hitDone = wait(dur * 0.84).then(() => {
         onHit && onHit(dest.x, dest.y);
         const opp = c === 'w' ? 'b' : 'w';
+        this.smash(dest.x, dest.y, opp);
+        this.shake(1);
         const bs = this.barSlot(opp, b.bar[opp]);
-        return this.fly(victim, bs.x, bs.y, { dur: 700, h: 64, lift: 1.34, flips: 2 }).then(() => this.ripple(bs.x, bs.y, this.T.danger, true));
+        return this.fly(victim, bs.x, bs.y, { dur: 820, h: 84, lift: 1.5, flips: 3, streak: this.T.danger }).then(() => {
+          this.ripple(bs.x, bs.y, this.T.danger, true);
+          this.sparkle(bs.x, bs.y, this.T.danger, 10);
+          this.nudge(victim, 1);
+          this.shake(0.45);
+        });
       });
     }
     const landed = wait(dur * 0.86).then(() => {
-      this.ripple(dest.x, dest.y, m.to === 'off' ? this.T.accent : this.T.accentSoft, m.to === 'off');
-      this.sparkle(dest.x, dest.y, m.to === 'off' ? this.T.accent : '#fff3cf', m.to === 'off' ? 10 : 7);
-      this.nudge(under, 1);
+      this.ripple(dest.x, dest.y, m.hit ? this.T.danger : m.to === 'off' ? this.T.accent : this.T.accentSoft, m.to === 'off' || m.hit);
+      this.sparkle(dest.x, dest.y, m.to === 'off' ? this.T.accent : '#fff3cf', m.to === 'off' ? 12 : 9);
+      // hedefteki yığın yukarıdan aşağı sarsılır
+      destStack.slice().reverse().forEach((x, i) => { if (!m.hit && i < 4) setTimeout(() => this.nudge(x, i === 0 ? 1 : 0), i * 45); });
       onLand && onLand(m.to === 'off');
     });
-    await this.fly(e, dest.x, dest.y, { dur, h, end: m.to === 'off' ? 'slab' : 'land' });
+    await this.fly(e, dest.x, dest.y, { dur, h, end: m.to === 'off' ? 'slab' : 'land', streak: m.to === 'off' ? this.T.accent : this.T.accentSoft });
     await landed;
     await hitDone;
   }
@@ -477,10 +553,10 @@ export class BoardView {
   // vuruş efekti
   burst(x, y, color) {
     const g = el('g', { class: 'burst', transform: `translate(${F(x)} ${F(y)})` });
-    let h = `<circle r="20" fill="none" stroke="${color}" stroke-width="2.6"></circle><circle r="27" fill="none" stroke="${color}" stroke-width="1.4" stroke-opacity="0.5"></circle>`;
-    for (let i = 0; i < 10; i++) {
-      const a = (i / 10) * Math.PI * 2 + Math.random() * 0.3;
-      const d0 = 19, d1 = 30 + Math.random() * 10;
+    let h = `<circle r="20" fill="none" stroke="${color}" stroke-width="3"></circle><circle r="28" fill="none" stroke="${color}" stroke-width="1.6" stroke-opacity="0.55"></circle><circle r="36" fill="none" stroke="#ffd27a" stroke-width="1" stroke-opacity="0.4"></circle>`;
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2 + Math.random() * 0.25;
+      const d0 = 18, d1 = 32 + Math.random() * 14;
       h += `<line x1="${F(Math.cos(a) * d0)}" y1="${F(Math.sin(a) * d0)}" x2="${F(Math.cos(a) * d1)}" y2="${F(Math.sin(a) * d1)}" stroke="${i % 3 ? '#ffd27a' : color}" stroke-width="${F(1.4 + Math.random() * 1.2)}" stroke-linecap="round"></line>`;
     }
     g.innerHTML = `<g class="burst-in">${h}</g>`;
