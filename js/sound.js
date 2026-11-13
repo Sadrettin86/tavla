@@ -29,6 +29,7 @@ export class Sound {
     this.trVoice = null;
     this.speechReady = false;
     this.silentEl = null;
+    this.ambLevel = 0.45;
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) { if (this.silentEl) this.silentEl.pause(); return; }
       if (this.ctx && this.ctx.state !== 'running' && this._enabled) this.ctx.resume().catch(() => {});
@@ -320,134 +321,49 @@ export class Sound {
   }
 
   // --- kahvehane ortamı
-  // Uzaktan gelen konuşma uğultusu, oda uğultusu, çay bardağı/kaşık şıngırtısı, başka masalardaki tavla.
-  // Hepsi kodla üretilir. ambience(true) yalnızca isteği kaydeder; ses bağlamı açılınca kendiliğinden başlar.
+  // ses/kahvehane.m4a: 2 dakikalık, uçları birbirine kaynatılmış kayıt. Web Audio'da döngüye alınır,
+  // böylece iPhone'da da boşluksuz döner ve genel ses düğmesine uyar.
+  // ambience(true) yalnızca isteği kaydeder; ses bağlamı açılınca kendiliğinden başlar.
   ambience(on) {
     this.ambWant = !!on;
-    if (on && !this.ambTimer) this.ambTimer = setInterval(() => this.ambTick(), 200);
+    if (on && !this.ambTimer) this.ambTimer = setInterval(() => this.ambTick(), 300);
     this.ambTick();
   }
 
   get ambPlaying() { return !!(this.amb && this.amb.live); }
 
-  ambBuild() {
-    const c = this.ctx;
-    const A = { live: false, voices: [], nextClink: 0, nextGame: 0 };
-    A.out = c.createGain(); A.out.gain.value = 0.0001;
-    A.out.connect(this.master);
-    const send = c.createGain(); send.gain.value = 0.9; A.out.connect(send).connect(this.verb);
-    // konuşmalar: uzakta, boğuk
-    A.talk = c.createBiquadFilter(); A.talk.type = 'lowpass'; A.talk.frequency.value = 1500; A.talk.Q.value = 0.5;
-    const talkG = c.createGain(); talkG.gain.value = 0.55;
-    A.talk.connect(talkG).connect(A.out);
-    // oda uğultusu: kahverengi gürültü
-    const len = c.sampleRate * 4;
-    const nb = c.createBuffer(1, len, c.sampleRate);
-    const d = nb.getChannelData(0);
-    let last = 0;
-    for (let i = 0; i < len; i++) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = last * 3.5; }
-    const hum = c.createBufferSource(); hum.buffer = nb; hum.loop = true;
-    const hl = c.createBiquadFilter(); hl.type = 'lowpass'; hl.frequency.value = 380;
-    const hg = c.createGain(); hg.gain.value = 0.35;
-    hum.connect(hl).connect(hg).connect(A.out); hum.start();
-    A.hum = hum;
-    // 6 ses: erkek ağırlıklı, her biri kendi perdesinde
-    const bases = [105, 118, 128, 140, 165, 205];
-    for (const base of bases) {
-      const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = base;
-      const f1 = c.createBiquadFilter(); f1.type = 'bandpass'; f1.Q.value = 5; f1.frequency.value = 600;
-      const f2 = c.createBiquadFilter(); f2.type = 'bandpass'; f2.Q.value = 7; f2.frequency.value = 1200;
-      const g2 = c.createGain(); g2.gain.value = 0.5;
-      const env = c.createGain(); env.gain.value = 0;
-      const pan = c.createStereoPanner ? c.createStereoPanner() : null;
-      o.connect(f1).connect(env); o.connect(f2).connect(g2).connect(env);
-      if (pan) { pan.pan.value = Math.random() * 1.6 - 0.8; env.connect(pan).connect(A.talk); } else env.connect(A.talk);
-      o.start();
-      A.voices.push({ o, f1, f2, env, base, next: c.currentTime + Math.random() * 2, loud: 0.5 + Math.random() * 0.5, talking: Math.random() < 0.6 });
-    }
-    A.nextClink = c.currentTime + 1 + Math.random() * 4;
-    A.nextGame = c.currentTime + 3 + Math.random() * 6;
-    this.amb = A;
+  ambLoad() {
+    if (this.ambBuf || this.ambLoading) return;
+    this.ambLoading = fetch(new URL('../ses/kahvehane.m4a', import.meta.url))
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
+      .then((ab) => new Promise((res, rej) => this.ctx.decodeAudioData(ab, res, rej)))
+      .then((buf) => { this.ambBuf = buf; this.ambTick(); })
+      .catch(() => { this.ambLoading = null; });
   }
 
   ambTick() {
     if (!this.ambWant && !this.amb) { clearInterval(this.ambTimer); this.ambTimer = null; return; }
     const want = this.ambWant && this.ok && !document.hidden;
     if (!want) {
-      if (this.amb && this.amb.live) { this.amb.out.gain.setTargetAtTime(0.0001, this.ctx.currentTime, 0.25); this.amb.live = false; }
-      if (!this.ambWant && this.amb && this.ctx) {
+      if (this.amb && this.amb.live) { this.amb.out.gain.setTargetAtTime(0.0001, this.ctx.currentTime, 0.3); this.amb.live = false; }
+      if (!this.ambWant && this.amb) {
         const A = this.amb; this.amb = null;
-        setTimeout(() => { try { A.hum.stop(); for (const v of A.voices) v.o.stop(); A.out.disconnect(); } catch (e) { /* yok say */ } }, 1500);
+        setTimeout(() => { try { A.src.stop(); A.out.disconnect(); } catch (e) { /* yok say */ } }, 1500);
         clearInterval(this.ambTimer); this.ambTimer = null;
       }
       return;
     }
-    if (!this.amb) this.ambBuild();
-    const A = this.amb, c = this.ctx, now = c.currentTime, R = Math.random;
-    if (!A.live) { A.out.gain.cancelScheduledValues(now); A.out.gain.setTargetAtTime(0.22, now, 1.2); A.live = true; }
-    const ahead = now + 0.6;
-    // ünlüler: [F1, F2] (a, e, ı, i, o, ö, u, ü)
-    const V = [[730, 1250], [530, 1850], [450, 1450], [300, 2200], [500, 900], [420, 1650], [330, 850], [300, 1700]];
-    for (const v of A.voices) {
-      while (v.next < ahead) {
-        let t = Math.max(v.next, now);
-        if (!v.talking) {
-          // sessizlik bitti, konuşmaya başla
-          v.talking = true; v.left = 4 + Math.floor(R() * 14); v.next = t; continue;
-        }
-        if (v.left-- <= 0) {
-          v.env.gain.setTargetAtTime(0, t, 0.05);
-          v.talking = false; v.next = t + 0.8 + R() * 4; continue;
-        }
-        const dur = 0.09 + R() * 0.16;
-        const [a, b] = V[Math.floor(R() * V.length)];
-        const p = v.base * (0.9 + R() * 0.25) * (v.left < 2 ? 0.88 : 1);
-        v.o.frequency.setTargetAtTime(p, t, 0.04);
-        v.f1.frequency.setTargetAtTime(a, t, 0.03);
-        v.f2.frequency.setTargetAtTime(b, t, 0.03);
-        const lv = v.loud * (0.5 + R() * 0.5) * 0.09;
-        v.env.gain.setTargetAtTime(lv, t, 0.02);
-        v.env.gain.setTargetAtTime(lv * 0.15, t + dur * 0.7, 0.03); // ünsüz boşluğu
-        // bazen kısa bir duraklama (kelime arası)
-        v.next = t + dur + (R() < 0.22 ? 0.12 + R() * 0.3 : 0.015);
-        // ara sıra kahkaha: hızlı, tiz hecelerle
-        if (R() < 0.006) {
-          for (let k = 0; k < 5; k++) {
-            const tk = v.next + k * 0.14;
-            v.o.frequency.setTargetAtTime(v.base * 1.6, tk, 0.02);
-            v.f1.frequency.setTargetAtTime(750, tk, 0.02);
-            v.env.gain.setTargetAtTime(v.loud * 0.11, tk, 0.015);
-            v.env.gain.setTargetAtTime(0.002, tk + 0.08, 0.02);
-          }
-          v.next += 0.75;
-        }
-      }
+    if (!this.ambBuf) { this.ambLoad(); return; }
+    const c = this.ctx, now = c.currentTime;
+    if (!this.amb) {
+      const out = c.createGain(); out.gain.value = 0.0001;
+      out.connect(this.master);
+      const src = c.createBufferSource(); src.buffer = this.ambBuf; src.loop = true;
+      src.connect(out);
+      src.start(now, Math.random() * this.ambBuf.duration);
+      this.amb = { src, out, live: false };
     }
-    // çay bardağı, kaşık
-    if (A.nextClink < ahead) {
-      const t = Math.max(A.nextClink, now);
-      const n = R() < 0.4 ? 3 + Math.floor(R() * 3) : 1; // karıştırma ya da tek tık
-      for (let k = 0; k < n; k++) {
-        const tk = t + k * (0.11 + R() * 0.05), g = (0.18 + R() * 0.15) * (k ? 0.7 : 1);
-        this.ring(tk, 3100 + R() * 1400, g, 0.18 + R() * 0.15, A.out);
-        this.ring(tk, 5600 + R() * 1600, g * 0.5, 0.09, A.out);
-        this.burst(tk, { f: 4500, q: 2, gain: g * 0.6, decay: 0.008, len: 0.03, out: A.out });
-      }
-      A.nextClink = t + 3 + R() * 9;
-    }
-    // başka masalarda tavla: zar ve pul tıkırtısı
-    if (A.nextGame < ahead) {
-      const t = Math.max(A.nextGame, now);
-      const dice = R() < 0.5, n = dice ? 3 + Math.floor(R() * 3) : 1 + Math.floor(R() * 2);
-      let tk = t;
-      for (let k = 0; k < n; k++) {
-        const g = 0.35 * (dice ? 1 - k * 0.15 : 1);
-        this.burst(tk, { f: dice ? 3000 : 1600, q: 1.5, gain: g, decay: 0.012, len: 0.04, out: A.out });
-        this.ring(tk, dice ? 1900 : 900, g * 0.35, 0.05, A.out);
-        this.ring(tk, 230, g * 0.5, 0.08, A.out);
-        tk += dice ? 0.06 + R() * 0.09 : 0.18 + R() * 0.2;
-      }
-      A.nextGame = t + 4 + R() * 9;
-    }
+    const A = this.amb;
+    if (!A.live) { A.out.gain.cancelScheduledValues(now); A.out.gain.setTargetAtTime(this.ambLevel, now, 1); A.live = true; }
   }
 }

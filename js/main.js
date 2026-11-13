@@ -53,10 +53,10 @@ function themeSwatch(k) {
 class App {
   constructor() {
     const s = store.get('ayar', {});
-    this.settings = { name: s.name || '', to: 5, theme: 'ceviz', sound: s.sound !== false, voice: s.voice !== false, amb: s.amb !== false };
+    this.settings = { name: s.name || '', to: 5, theme: 'ceviz', sound: s.sound !== false, amb: s.amb !== false };
     this.sound = new Sound();
     this.sound.enabled = this.settings.sound;
-    this.sound.voice = this.settings.voice;
+    this.sound.voice = false;
     this.me = { id: clientId(), name: this.settings.name };
     this.G = null;
     this.room = null;
@@ -137,13 +137,6 @@ class App {
     $('#btnMenuClose').addEventListener('click', () => { $('#menu').hidden = true; });
     $('#menu').addEventListener('click', (e) => { if (e.target.id === 'menu') $('#menu').hidden = true; });
     $('#mSound').addEventListener('click', () => this.toggleSound());
-    $('#mVoice').addEventListener('click', () => {
-      this.settings.voice = !this.settings.voice;
-      this.sound.voice = this.settings.voice;
-      this.save();
-      this.paintMenu();
-      if (this.settings.voice) this.sound.say('Şeşbeş');
-    });
     $('#mAmb').addEventListener('click', () => {
       this.settings.amb = !this.settings.amb;
       this.save();
@@ -952,7 +945,6 @@ class App {
           this.sound.doubles();
           FX.banner(stage, upperTR(nm) + '!', `${a.dice[0]} · ${a.dice[1]} — dört hamle`);
         } else this.namePill(nm, side);
-        this.sound.say(nm);
         this.maybeAutoPass(a.by);
         break;
       }
@@ -1141,7 +1133,6 @@ class App {
     $('#mSoundVal').textContent = this.settings.sound ? 'Açık' : 'Kapalı';
     $('#mFull').hidden = FS.standalone() || (!FS.supported() && !FS.IOS);
     $('#mFullVal').textContent = FS.supported() ? (FS.active() ? 'Açık' : 'Kapalı') : 'Nasıl?';
-    $('#mVoiceVal').textContent = this.settings.voice ? 'Açık' : 'Kapalı';
     $('#mAmbVal').textContent = this.settings.amb ? 'Açık' : 'Kapalı';
   }
 
