@@ -53,7 +53,7 @@ function themeSwatch(k) {
 class App {
   constructor() {
     const s = store.get('ayar', {});
-    this.settings = { name: s.name || '', to: 5, theme: 'ceviz', sound: s.sound !== false, amb: s.amb !== false };
+    this.settings = { name: s.name || '', to: 5, theme: 'ceviz', sound: s.sound !== false };
     this.sound = new Sound();
     this.sound.enabled = this.settings.sound;
     this.sound.voice = false;
@@ -137,12 +137,6 @@ class App {
     $('#btnMenuClose').addEventListener('click', () => { $('#menu').hidden = true; });
     $('#menu').addEventListener('click', (e) => { if (e.target.id === 'menu') $('#menu').hidden = true; });
     $('#mSound').addEventListener('click', () => this.toggleSound());
-    $('#mAmb').addEventListener('click', () => {
-      this.settings.amb = !this.settings.amb;
-      this.save();
-      this.paintMenu();
-      this.sound.ambience(this.settings.amb && document.body.dataset.screen === 'game');
-    });
     $('#mFull').addEventListener('click', () => this.toggleFullscreen());
     $('#mResign').addEventListener('click', () => this.resign());
     $('#mExit').addEventListener('click', async () => {
@@ -229,7 +223,6 @@ class App {
     document.body.dataset.screen = name;
     if (name !== 'game') { $('#lafPanel').hidden = true; $('#menu').hidden = true; }
     if (name === 'lobby') this.startLobby(); else this.stopLobby();
-    if (name !== 'game') this.sound.ambience(false);
   }
 
   // ============================================================ açık oyunlar listesi
@@ -478,7 +471,6 @@ class App {
   }
 
   leave() {
-    this.sound.ambience(false);
     if (this.room) { try { this.room.close(); } catch (e) { /* yok say */ } }
     this.lobbyKey = null;
     lastRoom.set(null);
@@ -563,7 +555,6 @@ class App {
 
   enterGame() {
     this.show('game');
-    this.sound.ambience(this.settings.amb);
     this.keepAwake();
     this.maybeFullscreen();
     this.snap();
@@ -1133,7 +1124,6 @@ class App {
     $('#mSoundVal').textContent = this.settings.sound ? 'Açık' : 'Kapalı';
     $('#mFull').hidden = FS.standalone() || (!FS.supported() && !FS.IOS);
     $('#mFullVal').textContent = FS.supported() ? (FS.active() ? 'Açık' : 'Kapalı') : 'Nasıl?';
-    $('#mAmbVal').textContent = this.settings.amb ? 'Açık' : 'Kapalı';
   }
 
   toggleSound() {

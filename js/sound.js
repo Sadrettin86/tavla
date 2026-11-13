@@ -29,7 +29,6 @@ export class Sound {
     this.trVoice = null;
     this.speechReady = false;
     this.silentEl = null;
-    this.ambLevel = 0.22;
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) { if (this.silentEl) this.silentEl.pause(); return; }
       if (this.ctx && this.ctx.state !== 'running' && this._enabled) this.ctx.resume().catch(() => {});
@@ -116,7 +115,7 @@ export class Sound {
   get t() { return this.ctx.currentTime; }
 
   // --- yapı taşları
-  burst(t, { f = 2000, q = 3, gain = 0.5, decay = 0.05, type = 'bandpass', len = 0.12, out = null } = {}) {
+  burst(t, { f = 2000, q = 3, gain = 0.5, decay = 0.05, type = 'bandpass', len = 0.12 } = {}) {
     const c = this.ctx;
     const src = c.createBufferSource();
     src.buffer = this.noise;
@@ -126,7 +125,7 @@ export class Sound {
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(gain, t + 0.002);
     g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
-    src.connect(fl).connect(g).connect(out || this.master);
+    src.connect(fl).connect(g).connect(this.master);
     src.start(t, Math.random() * 0.8, len);
   }
 
@@ -147,7 +146,7 @@ export class Sound {
   }
 
   // Titreşim kipi: kısa, kendiliğinden sönen sinüs (ahşabın, zarın, pulun "çınlaması")
-  ring(t, f, gain, decay, out = null) {
+  ring(t, f, gain, decay) {
     const c = this.ctx;
     const o = c.createOscillator();
     o.frequency.value = f * (0.97 + Math.random() * 0.06);
@@ -156,8 +155,8 @@ export class Sound {
     g.gain.exponentialRampToValueAtTime(gain, t + 0.0015);
     g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
     o.connect(g);
-    if (out) g.connect(out);
-    else { g.connect(this.master); g.connect(this.verb); }
+    g.connect(this.master);
+    g.connect(this.verb);
     o.start(t);
     o.stop(t + decay + 0.03);
   }
@@ -318,52 +317,5 @@ export class Sound {
       if (busy) setTimeout(() => speechSynthesis.speak(u), 80);
       else speechSynthesis.speak(u);
     } catch (e) { /* yok say */ }
-  }
-
-  // --- kahvehane ortamı
-  // ses/kahvehane.m4a: 2 dakikalık, uçları birbirine kaynatılmış kayıt. Web Audio'da döngüye alınır,
-  // böylece iPhone'da da boşluksuz döner ve genel ses düğmesine uyar.
-  // ambience(true) yalnızca isteği kaydeder; ses bağlamı açılınca kendiliğinden başlar.
-  ambience(on) {
-    this.ambWant = !!on;
-    if (on && !this.ambTimer) this.ambTimer = setInterval(() => this.ambTick(), 300);
-    this.ambTick();
-  }
-
-  get ambPlaying() { return !!(this.amb && this.amb.live); }
-
-  ambLoad() {
-    if (this.ambBuf || this.ambLoading) return;
-    this.ambLoading = fetch(new URL('../ses/kahvehane.m4a', import.meta.url))
-      .then((r) => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })
-      .then((ab) => new Promise((res, rej) => this.ctx.decodeAudioData(ab, res, rej)))
-      .then((buf) => { this.ambBuf = buf; this.ambTick(); })
-      .catch(() => { this.ambLoading = null; });
-  }
-
-  ambTick() {
-    if (!this.ambWant && !this.amb) { clearInterval(this.ambTimer); this.ambTimer = null; return; }
-    const want = this.ambWant && this.ok && !document.hidden;
-    if (!want) {
-      if (this.amb && this.amb.live) { this.amb.out.gain.setTargetAtTime(0.0001, this.ctx.currentTime, 0.3); this.amb.live = false; }
-      if (!this.ambWant && this.amb) {
-        const A = this.amb; this.amb = null;
-        setTimeout(() => { try { A.src.stop(); A.out.disconnect(); } catch (e) { /* yok say */ } }, 1500);
-        clearInterval(this.ambTimer); this.ambTimer = null;
-      }
-      return;
-    }
-    if (!this.ambBuf) { this.ambLoad(); return; }
-    const c = this.ctx, now = c.currentTime;
-    if (!this.amb) {
-      const out = c.createGain(); out.gain.value = 0.0001;
-      out.connect(this.master);
-      const src = c.createBufferSource(); src.buffer = this.ambBuf; src.loop = true;
-      src.connect(out);
-      src.start(now, Math.random() * this.ambBuf.duration);
-      this.amb = { src, out, live: false };
-    }
-    const A = this.amb;
-    if (!A.live) { A.out.gain.cancelScheduledValues(now); A.out.gain.setTargetAtTime(this.ambLevel, now, 1); A.live = true; }
   }
 }
