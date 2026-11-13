@@ -258,6 +258,49 @@ export function roll(G0, c, d1, d2) {
   return G;
 }
 
+// ------------------------------------------------------------------ gizli zar yardımı
+// G.assist = { to: 'w'|'b', lvl: 1|2 }: "to" oyuncusunun zarları hafifçe iyileştirilir.
+// Hafif: atışların yarısında iki atıştan iyisi. Güçlü: her atışta üç atıştan iyisi.
+export function setAssist(G0, by, lvl) {
+  const G = copy(G0);
+  G.assist = lvl ? { to: other(by), lvl } : null;
+  G.seq += 1; // günlüğe yazılmaz, karşı tarafta animasyon ya da yazı çıkmaz
+  return G;
+}
+
+function pairScore(G, c, d1, d2) {
+  const b = G.board, rules = R(G), locked = G.locked || [];
+  let s = d1 === d2 ? 2.6 * d1 + 1 : d1 + d2;
+  for (const d of d1 === d2 ? [d1] : [d1, d2]) {
+    const ms = movesForDie(b, c, d, rules, locked);
+    if (!ms.length) s -= b.bar[c] ? 9 : 5;
+    else if (ms.some((m) => m.hit)) s += 4;
+  }
+  return s + Math.random() * 1.5;
+}
+
+export function assistedPair(G, c, rnd = rollDie) {
+  const A = G.assist;
+  let tries = 1;
+  if (A && A.to === c) tries = A.lvl >= 2 ? 3 : (Math.random() < 0.5 ? 2 : 1);
+  let best = null, bestS = -Infinity;
+  for (let i = 0; i < tries; i++) {
+    const p = [rnd(), rnd()];
+    const sc = tries > 1 ? pairScore(G, c, p[0], p[1]) : 0;
+    if (sc > bestS) { bestS = sc; best = p; }
+  }
+  return best;
+}
+
+export function assistedOpening(G, c, rnd = rollDie) {
+  const A = G.assist;
+  if (!A || A.to !== c) return rnd();
+  const n = A.lvl >= 2 ? 2 : (Math.random() < 0.5 ? 2 : 1);
+  let v = 0;
+  for (let i = 0; i < n; i++) v = Math.max(v, rnd());
+  return v;
+}
+
 export function currentLegal(G) {
   if (G.phase !== 'move') return [];
   return legalMoves(G.board, G.turn, G.rem, R(G), G.locked);

@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Tavla">
 <meta name="description" content="Online tavla. Oyun kur ya da açık bir oyuna katıl.">
-<meta name="tavla-version" content="202611111121">
+<meta name="tavla-version" content="202611131029">
 <title>Tavla</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -17,22 +17,22 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Ultra&display=swap">
-<link rel="stylesheet" href="css/style.css?v=202611111121">
+<link rel="stylesheet" href="css/style.css?v=202611131029">
 <script type="importmap">
 {
   "imports": {
-    "./js/board.js": "./js/board.js?v=202611111121",
-    "./js/dice.js": "./js/dice.js?v=202611111121",
-    "./js/firebase-config.js": "./js/firebase-config.js?v=202611111121",
-    "./js/fullscreen.js": "./js/fullscreen.js?v=202611111121",
-    "./js/fx.js": "./js/fx.js?v=202611111121",
-    "./js/icons.js": "./js/icons.js?v=202611111121",
-    "./js/main.js": "./js/main.js?v=202611111121",
-    "./js/names.js": "./js/names.js?v=202611111121",
-    "./js/net.js": "./js/net.js?v=202611111121",
-    "./js/rules.js": "./js/rules.js?v=202611111121",
-    "./js/sound.js": "./js/sound.js?v=202611111121",
-    "./js/theme.js": "./js/theme.js?v=202611111121"
+    "./js/board.js": "./js/board.js?v=202611131029",
+    "./js/dice.js": "./js/dice.js?v=202611131029",
+    "./js/firebase-config.js": "./js/firebase-config.js?v=202611131029",
+    "./js/fullscreen.js": "./js/fullscreen.js?v=202611131029",
+    "./js/fx.js": "./js/fx.js?v=202611131029",
+    "./js/icons.js": "./js/icons.js?v=202611131029",
+    "./js/main.js": "./js/main.js?v=202611131029",
+    "./js/names.js": "./js/names.js?v=202611131029",
+    "./js/net.js": "./js/net.js?v=202611131029",
+    "./js/rules.js": "./js/rules.js?v=202611131029",
+    "./js/sound.js": "./js/sound.js?v=202611131029",
+    "./js/theme.js": "./js/theme.js?v=202611131029"
   }
 }
 </script>
@@ -153,6 +153,19 @@
   <!-- onay -->
 </section>
 
+<!-- gizli yardım (kendi ad kartına uzun basınca) -->
+  <div class="sheet sheet-top" id="assist" hidden role="dialog" aria-labelledby="assistTitle">
+    <div class="sheet-card small">
+      <p id="assistTitle"><b>Gizli yardım</b><br><span class="assist-sub">Açıkken rakibinin (<b id="assistWho">rakip</b>) zarları biraz daha iyi gelir. Bunu yalnızca sen görürsün.</span></p>
+      <div class="seg" role="group" aria-label="Yardım düzeyi">
+        <button type="button" data-lvl="0">Kapalı</button>
+        <button type="button" data-lvl="1">Hafif</button>
+        <button type="button" data-lvl="2">Güçlü</button>
+      </div>
+      <button type="button" class="btn" id="assistClose">Kapat</button>
+    </div>
+  </div>
+
 <!-- onay penceresi: her ekranda kullanılır -->
   <div class="sheet sheet-top" id="confirm" hidden role="alertdialog" aria-labelledby="confirmText">
     <div class="sheet-card small">
@@ -167,6 +180,6 @@
 
 <div id="globalToast" class="global-toast" role="status" hidden></div>
 
-<script type="module" src="js/main.js?v=202611111121"></script>
+<script type="module" src="js/main.js?v=202611131029"></script>
 </body>
 </html>

@@ -173,6 +173,20 @@ class App {
       if (document.visibilityState === 'visible') this.checkUpdate();
       this.updateTitle();
     });
+    // gizli yardım: oyunda kendi ad kartına 1 saniye basılı tut
+    {
+      const card = $('#cardBottom');
+      let tm = null;
+      const stop = () => { clearTimeout(tm); tm = null; };
+      card.addEventListener('pointerdown', () => { stop(); tm = setTimeout(() => { tm = null; this.openAssist(); }, 1000); });
+      for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) card.addEventListener(ev, stop);
+      card.addEventListener('contextmenu', (e) => e.preventDefault());
+      $('#assist').addEventListener('click', (e) => {
+        const b = e.target.closest('button[data-lvl]');
+        if (b) { this.setAssist(+b.dataset.lvl); return; }
+        if (e.target === $('#assist') || e.target.closest('#assistClose')) $('#assist').hidden = true;
+      });
+    }
     window.addEventListener('hashchange', () => this.route());
     this.route();
     setTimeout(() => this.checkUpdate(), 3000);
@@ -494,6 +508,28 @@ class App {
     this.keepAwake();
   }
 
+  openAssist() {
+    const G = this.G;
+    if (!G || !this.myColor || this.mode !== 'online' || !(G.players.w && G.players.b)) return;
+    const opp = G.players[other(this.myColor)];
+    $('#assistWho').textContent = opp ? opp.name : 'Rakip';
+    this.paintAssist();
+    $('#assist').hidden = false;
+  }
+
+  paintAssist() {
+    const A = this.G && this.G.assist;
+    const lvl = A && A.to === other(this.myColor) ? A.lvl : 0;
+    document.querySelectorAll('#assist button[data-lvl]').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.lvl === lvl)));
+  }
+
+  async setAssist(lvl) {
+    if (!this.myColor) return;
+    await this.act((S) => Rules.setAssist(S, this.myColor, lvl));
+    this.paintAssist();
+    setTimeout(() => { $('#assist').hidden = true; }, 250);
+  }
+
   async deleteGame(id, who) {
     if (!(await this.confirm(`${who} oyununu listeden silmek istiyor musun?`))) return;
     try { await removeLobbyEntry(id); this.globalToast('Oyun silindi'); }
@@ -770,14 +806,14 @@ class App {
       const G = this.G;
       if (G.phase === 'opening') {
         if (this.mode === 'local') {
-          await this.act((S) => Rules.rollOpening(S, 'w', Rules.rollDie()));
-          await this.act((S) => Rules.rollOpening(S, 'b', Rules.rollDie()));
+          await this.act((S) => Rules.rollOpening(S, 'w', Rules.assistedOpening(S, 'w')));
+          await this.act((S) => Rules.rollOpening(S, 'b', Rules.assistedOpening(S, 'b')));
         } else {
           const c = this.myColor;
-          await this.act((S) => Rules.rollOpening(S, c, Rules.rollDie()));
+          await this.act((S) => Rules.rollOpening(S, c, Rules.assistedOpening(S, c)));
         }
       } else {
-        const c = G.turn, a = Rules.rollDie(), b = Rules.rollDie();
+        const c = G.turn, [a, b] = Rules.assistedPair(G, c);
         await this.act((S) => Rules.roll(S, c, a, b));
       }
     } finally {
