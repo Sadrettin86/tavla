@@ -53,7 +53,7 @@ function themeSwatch(k) {
 class App {
   constructor() {
     const s = store.get('ayar', {});
-    this.settings = { name: s.name || '', to: 5, theme: 'ceviz', sound: s.sound !== false, voice: s.voice !== false };
+    this.settings = { name: s.name || '', to: 5, theme: 'ceviz', sound: s.sound !== false, voice: s.voice !== false, amb: s.amb !== false };
     this.sound = new Sound();
     this.sound.enabled = this.settings.sound;
     this.sound.voice = this.settings.voice;
@@ -144,6 +144,12 @@ class App {
       this.paintMenu();
       if (this.settings.voice) this.sound.say('Şeşbeş');
     });
+    $('#mAmb').addEventListener('click', () => {
+      this.settings.amb = !this.settings.amb;
+      this.save();
+      this.paintMenu();
+      this.sound.ambience(this.settings.amb && document.body.dataset.screen === 'game');
+    });
     $('#mFull').addEventListener('click', () => this.toggleFullscreen());
     $('#mResign').addEventListener('click', () => this.resign());
     $('#mExit').addEventListener('click', async () => {
@@ -230,6 +236,7 @@ class App {
     document.body.dataset.screen = name;
     if (name !== 'game') { $('#lafPanel').hidden = true; $('#menu').hidden = true; }
     if (name === 'lobby') this.startLobby(); else this.stopLobby();
+    if (name !== 'game') this.sound.ambience(false);
   }
 
   // ============================================================ açık oyunlar listesi
@@ -478,6 +485,7 @@ class App {
   }
 
   leave() {
+    this.sound.ambience(false);
     if (this.room) { try { this.room.close(); } catch (e) { /* yok say */ } }
     this.lobbyKey = null;
     lastRoom.set(null);
@@ -562,6 +570,7 @@ class App {
 
   enterGame() {
     this.show('game');
+    this.sound.ambience(this.settings.amb);
     this.keepAwake();
     this.maybeFullscreen();
     this.snap();
@@ -1133,6 +1142,7 @@ class App {
     $('#mFull').hidden = FS.standalone() || (!FS.supported() && !FS.IOS);
     $('#mFullVal').textContent = FS.supported() ? (FS.active() ? 'Açık' : 'Kapalı') : 'Nasıl?';
     $('#mVoiceVal').textContent = this.settings.voice ? 'Açık' : 'Kapalı';
+    $('#mAmbVal').textContent = this.settings.amb ? 'Açık' : 'Kapalı';
   }
 
   toggleSound() {
