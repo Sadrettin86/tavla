@@ -173,12 +173,12 @@ class App {
       if (document.visibilityState === 'visible') this.checkUpdate();
       this.updateTitle();
     });
-    // gizli yardım: kendi kartına 1 sn bas → rakibe yardım; rakibin kartına bas → sana yardım
+    // gizli yardım: kendi kartına 3 sn bas → rakibe yardım; rakibin kartına bas → sana yardım
     for (const [sel, mine] of [['#cardBottom', true], ['#cardTop', false]]) {
       const card = $(sel);
       let tm = null;
       const stop = () => { clearTimeout(tm); tm = null; };
-      card.addEventListener('pointerdown', () => { stop(); tm = setTimeout(() => { tm = null; this.openAssist(mine); }, 1000); });
+      card.addEventListener('pointerdown', () => { stop(); tm = setTimeout(() => { tm = null; this.openAssist(mine); }, 3000); });
       for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) card.addEventListener(ev, stop);
       card.addEventListener('contextmenu', (e) => e.preventDefault());
     }
