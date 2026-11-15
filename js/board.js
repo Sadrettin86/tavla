@@ -396,8 +396,42 @@ export class BoardView {
   // Tahta sarsılır
   shake(power = 1) {
     if (reducedMotion()) return;
-    const k = [0, -4, 3.5, -2.5, 1.6, -0.8, 0].map((v, i) => ({ transform: `translate(${(v * power).toFixed(2)}px, ${((i % 2 ? 1.6 : -1.2) * power * (i < 6 ? 1 : 0)).toFixed(2)}px)` }));
-    this.svg.animate(k, { duration: 360, easing: 'ease-out' });
+    const n = 10, k = [];
+    for (let i = 0; i <= n; i++) {
+      const f = i === n ? 0 : power * (1 - i / n);
+      const sx = (i % 2 ? 1 : -1) * (5 + Math.random() * 3) * f, sy = (Math.random() * 2 - 1) * 4 * f, rot = (i % 2 ? -1 : 1) * 0.6 * f;
+      k.push({ transform: `translate(${sx.toFixed(2)}px, ${sy.toFixed(2)}px) rotate(${rot.toFixed(2)}deg)` });
+    }
+    this.svg.animate(k, { duration: 300 + power * 160, easing: 'ease-out' });
+  }
+
+  // Ekranda kısa kırmızı parlama
+  flashScreen() {
+    if (reducedMotion()) return;
+    const d = document.createElement('div');
+    d.className = 'hit-flash';
+    (this.wrap.closest('.stage') || this.wrap).appendChild(d);
+    d.animate([{ opacity: 0.85 }, { opacity: 0 }], { duration: 480, easing: 'ease-out', fill: 'forwards' }).finished.then(() => d.remove(), () => d.remove());
+  }
+
+  // Çevredeki pullar darbeyle sarsılır, biraz itilir
+  knock(x, y) {
+    if (reducedMotion()) return;
+    const r = this.g.r;
+    for (const e of this.lChk.querySelectorAll('.chk:not(.ghost)')) {
+      if (e.style.display === 'none' || e._x == null || e.getAnimations().length) continue;
+      const dx = e._x - x, dy = e._y - y, d = Math.hypot(dx, dy);
+      if (d < 1 || d > r * 7) continue;
+      const f = (1 - d / (r * 7)) * r * 0.7;
+      const ux = (dx / d) * f, uy = (dy / d) * f;
+      const base = e.style.transform;
+      e.animate([
+        { transform: base },
+        { transform: `${base} translate(${F(ux)}px, ${F(uy)}px) rotate(${F((Math.random() * 2 - 1) * 14 * f / r)}deg)`, offset: 0.25 },
+        { transform: `${base} translate(${F(-ux * 0.3)}px, ${F(-uy * 0.3)}px)`, offset: 0.6 },
+        { transform: base },
+      ], { duration: 420, delay: d / r * 18, easing: 'ease-out' });
+    }
   }
 
   // Kırılma anı: parlama, kıymıklar
@@ -408,23 +442,28 @@ export class BoardView {
     this.lFx.appendChild(g);
     const flash = el('circle', { r: F(r * 1.1), fill: '#fff' });
     g.appendChild(flash);
-    flash.animate([{ transform: 'scale(0.5)', opacity: 0.95 }, { transform: 'scale(2.4)', opacity: 0 }], { duration: 300, easing: 'ease-out', fill: 'forwards' });
+    flash.animate([{ transform: 'scale(0.5)', opacity: 1 }, { transform: 'scale(3.4)', opacity: 0 }], { duration: 340, easing: 'ease-out', fill: 'forwards' });
+    for (const [k, w, col] of [[0, 4, this.T.danger], [90, 2.4, '#ffd27a'], [180, 1.4, '#fff']]) {
+      const wave = el('circle', { r: F(r), fill: 'none', stroke: col, 'stroke-width': w });
+      g.appendChild(wave);
+      wave.animate([{ transform: 'scale(0.6)', opacity: 1 }, { transform: 'scale(5.2)', opacity: 0 }], { duration: 620, delay: k, easing: 'cubic-bezier(.15,.7,.3,1)', fill: 'backwards' }).finished.then(() => wave.remove(), () => {});
+    }
     const vc = this.T[color] || {};
-    for (let i = 0; i < 12; i++) {
-      const a = (i / 12) * Math.PI * 2 + Math.random() * 0.5;
-      const s = r * (0.22 + Math.random() * 0.22);
+    for (let i = 0; i < 22; i++) {
+      const a = (i / 22) * Math.PI * 2 + Math.random() * 0.4;
+      const s = r * (0.2 + Math.random() * 0.32);
       const sh = el('polygon', { points: `0,${F(-s)} ${F(s * 0.8)},${F(s * 0.6)} ${F(-s * 0.7)},${F(s * 0.5)}`, fill: i % 3 ? (vc.base || '#fff') : this.T.danger, stroke: vc.rim || '#0006', 'stroke-width': '0.5' });
       g.appendChild(sh);
-      const d = r * (1.8 + Math.random() * 1.8);
+      const d = r * (2.4 + Math.random() * 3.2);
       const dx = Math.cos(a) * d, dy = Math.sin(a) * d;
       const rot = (Math.random() < 0.5 ? -1 : 1) * (180 + Math.random() * 360);
       sh.animate([
         { transform: 'translate(0px, 0px) rotate(0deg) scale(1)', opacity: 1 },
         { transform: `translate(${F(dx * 0.7)}px, ${F(dy * 0.7 - r * 0.6)}px) rotate(${F(rot * 0.6)}deg) scale(1)`, opacity: 1, offset: 0.45 },
         { transform: `translate(${F(dx)}px, ${F(dy + r * 0.9)}px) rotate(${F(rot)}deg) scale(0.4)`, opacity: 0 },
-      ], { duration: 620 + Math.random() * 260, easing: 'cubic-bezier(.2,.6,.4,1)', fill: 'forwards' });
+      ], { duration: 760 + Math.random() * 360, easing: 'cubic-bezier(.2,.6,.4,1)', fill: 'forwards' });
     }
-    setTimeout(() => g.remove(), 1000);
+    setTimeout(() => g.remove(), 1300);
   }
 
   // İnişte etrafa saçılan küçük kıvılcımlar
@@ -477,13 +516,17 @@ export class BoardView {
         onHit && onHit(dest.x, dest.y);
         const opp = c === 'w' ? 'b' : 'w';
         this.smash(dest.x, dest.y, opp);
-        this.shake(1);
+        this.shake(2.2);
+        this.flashScreen();
+        this.knock(dest.x, dest.y);
         const bs = this.barSlot(opp, b.bar[opp]);
-        return this.fly(victim, bs.x, bs.y, { dur: 820, h: 84, lift: 1.5, flips: 3, streak: this.T.danger }).then(() => {
+        return this.fly(victim, bs.x, bs.y, { dur: 900, h: 120, lift: 1.85, flips: 5, streak: this.T.danger }).then(() => {
           this.ripple(bs.x, bs.y, this.T.danger, true);
-          this.sparkle(bs.x, bs.y, this.T.danger, 10);
+          this.sparkle(bs.x, bs.y, this.T.danger, 14);
+          this.smash(bs.x, bs.y, opp);
           this.nudge(victim, 1);
-          this.shake(0.45);
+          this.shake(1.1);
+          this.knock(bs.x, bs.y);
         });
       });
     }

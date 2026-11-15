@@ -299,7 +299,8 @@ input::placeholder { color: rgba(210, 191, 163, 0.7); }
 @keyframes destPing { 0% { transform: scale(0.7); opacity: 0.95; } 100% { transform: scale(1.9); opacity: 0; } }
 @keyframes pulse { 50% { opacity: 0.55; } }
 .burst-in { transform-box: fill-box; transform-origin: center; animation: burst 0.7s ease-out forwards; }
-@keyframes burst { from { transform: scale(0.45); opacity: 1; } to { transform: scale(1.55); opacity: 0; } }
+@keyframes burst { from { transform: scale(0.45); opacity: 1; } to { transform: scale(2.1); opacity: 0; } }
+.hit-flash { position: absolute; inset: 0; pointer-events: none; z-index: 5; background: radial-gradient(circle at 50% 50%, rgba(255,90,40,0) 30%, rgba(255,70,30,.55) 100%); }
 
 /* ---------------------------------------------------------------- zarlar */
 .dice-layer { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
