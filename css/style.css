@@ -458,21 +458,22 @@ input::placeholder { color: rgba(210, 191, 163, 0.7); }
 .laf-form .btn { height: 44px; min-height: 44px; padding: 0 14px; flex: none; }
 .reacts { justify-content: flex-start; gap: 10px; }
 
-/* ad kartının altındaki son mesajlar */
-.pslot { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+/* ad kartının altındaki son mesajlar: kutusuz, akan satırlar */
+.pslot { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 #slotBottom { flex-direction: column-reverse; }
-.msgs { display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; height: 104px; overflow: hidden; padding: 5px 8px; border-radius: 11px; border: 1px solid rgba(255, 230, 200, 0.12); background: rgba(0, 0, 0, 0.22); font-size: 12px; line-height: 1.25; }
-.msgs:empty::before { content: 'Mesaj yok'; color: rgba(246, 234, 214, 0.32); align-self: center; margin: auto 0; font-size: 11.5px; }
-.msg { color: #f6ead6; overflow-wrap: anywhere; flex: none; }
-.msg:not(:last-child) { opacity: 0.55; }
+.msgs { display: flex; flex-direction: column; justify-content: flex-end; gap: 3px; height: 104px; overflow: hidden; padding: 0 4px; font-size: 12px; line-height: 1.25; pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 22px); mask-image: linear-gradient(to bottom, transparent 0, #000 22px); }
+.msg { color: #f6ead6; overflow-wrap: anywhere; flex: none; transition: opacity 0.6s, font-size 0.3s, color 0.3s; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7); }
+.msg.latest { font-weight: 800; font-size: 13.5px; color: #ffe6a8; }
+.msg.old1 { opacity: 0.55; }
+.msg.old2 { opacity: 0.25; }
+.msg.gone { opacity: 0 !important; }
 .msg .ic-r { display: inline-flex; vertical-align: -4px; color: #ffd98a; }
-.msg.new { animation: msgIn 0.35s ease-out; }
-.msgs.flash { animation: msgFlash 0.9s ease-out; }
-@keyframes msgIn { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
-@keyframes msgFlash { 0% { border-color: rgba(242, 187, 78, 0.9); background: rgba(242, 187, 78, 0.22); } 100% { border-color: rgba(255, 230, 200, 0.12); background: rgba(0, 0, 0, 0.22); } }
+.msg.new { animation: msgIn 0.5s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes msgIn { 0% { transform: translateY(10px) scale(0.9); opacity: 0; text-shadow: 0 0 0 rgba(255, 210, 120, 0); } 50% { text-shadow: 0 0 14px rgba(255, 210, 120, 0.9); } 100% { transform: none; opacity: 1; } }
 @media (orientation: portrait) {
   #slotBottom { flex-direction: column; }
-  .msgs { height: 52px; padding: 4px 8px; }
+  .msgs { height: 46px; -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px); mask-image: linear-gradient(to bottom, transparent 0, #000 14px); }
   .msg { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .msg:not(:nth-last-child(-n+2)) { display: none; }
 }

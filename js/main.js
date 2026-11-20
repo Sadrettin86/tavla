@@ -1084,7 +1084,7 @@ class App {
     this.room.sendChat({ kind, text, color: this.myColor || '' });
   }
 
-  // ad kartının altındaki kutuya ekle (son 3 mesaj)
+  // ad kartının altında akan mesajlar: yenisi belirgin, eskiler silikleşip kaybolur
   logMsg(c, m) {
     const box = c === this.viewer() ? $('#msgsBottom') : $('#msgsTop');
     if (!box) return;
@@ -1095,8 +1095,18 @@ class App {
       d.innerHTML = `<span class="ic-r">${icon[m.text](18)}</span>`;
     } else d.textContent = String(m.text || '').slice(0, 100);
     box.appendChild(d);
-    while (box.children.length > 3) box.firstChild.remove();
-    box.classList.remove('flash'); void box.offsetWidth; box.classList.add('flash');
+    const list = () => [...box.children].filter((x) => !x.classList.contains('gone'));
+    const items = list().reverse(); // en yeniden eskiye
+    items.forEach((x, i) => {
+      x.classList.toggle('latest', i === 0);
+      x.classList.toggle('old1', i === 1);
+      x.classList.toggle('old2', i === 2);
+      if (i > 2) { x.classList.add('gone'); setTimeout(() => x.remove(), 650); }
+    });
+    // bir süre sonra kendiliğinden silikleşip kaybolur
+    setTimeout(() => { d.classList.remove('latest'); d.classList.add('old1'); }, 9000);
+    setTimeout(() => { d.classList.remove('old1'); d.classList.add('old2'); }, 14000);
+    setTimeout(() => { d.classList.add('gone'); setTimeout(() => d.remove(), 650); }, 18000);
   }
 
   clearMsgs() { for (const s of ['#msgsTop', '#msgsBottom']) { const b = $(s); if (b) b.innerHTML = ''; } }
