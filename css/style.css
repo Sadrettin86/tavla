@@ -477,3 +477,8 @@ input::placeholder { color: rgba(210, 191, 163, 0.7); }
   .msg { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .msg:not(:nth-last-child(-n+2)) { display: none; }
 }
+
+/* iPhone tarayıcısı: adres çubuğunun küçülmesi için sayfa biraz kaydırılabilir */
+html.bar-hide, html.bar-hide body { height: auto; }
+html.bar-hide body { min-height: calc(100lvh + 120px); overscroll-behavior-y: auto; }
+html.bar-hide .screen { height: 100dvh; bottom: auto; }

@@ -15,6 +15,9 @@ export function standalone() {
   } catch (e) { return false; }
 }
 
+// iPhone tarayıcısında adres çubuğunu kaydırarak küçültme (Fullscreen API olmadığı için)
+export const scrollHide = () => IPHONE && !standalone();
+
 export const supported = () => !IPHONE && !!(root.requestFullscreen || root.webkitRequestFullscreen);
 export const active = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
 export const touch = () => { try { return matchMedia('(pointer: coarse)').matches; } catch (e) { return false; } };

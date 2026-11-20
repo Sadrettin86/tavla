@@ -232,6 +232,10 @@ class App {
     document.body.dataset.screen = name;
     if (name !== 'game') { $('#lafPanel').hidden = true; $('#menu').hidden = true; }
     if (name === 'lobby') this.startLobby(); else this.stopLobby();
+    if (FS.scrollHide()) {
+      this.barHide();
+      if (name !== 'game') window.scrollTo(0, 0);
+    }
   }
 
   // ============================================================ açık oyunlar listesi
@@ -575,6 +579,25 @@ class App {
 
   maybeFullscreen() {
     if (this.fsWanted && document.body.dataset.screen === 'game' && !FS.active()) FS.enter();
+    this.barHide();
+  }
+
+  // iPhone tarayıcısı: sayfayı biraz kaydırılabilir yapıp aşağı kaydırınca Safari/Chrome
+  // adres ve sekme çubuklarını küçültür; oyun ekranı sabit kalır, boşalan yere yayılır.
+  barHide() {
+    const on = FS.scrollHide() && document.body.dataset.screen === 'game';
+    document.documentElement.classList.toggle('bar-hide', on);
+    if (!on) return;
+    requestAnimationFrame(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    if (!this._barTip) {
+      this._barTip = true;
+      try {
+        if (!localStorage.getItem('tavla:cubukIpucu')) {
+          localStorage.setItem('tavla:cubukIpucu', '1');
+          setTimeout(() => FX.toast(this.stage, 'Adres çubuğu kalırsa ekranı yukarı kaydır', 3200), 1500);
+        }
+      } catch (e) { /* yok say */ }
+    }
   }
 
   async toggleFullscreen() {
