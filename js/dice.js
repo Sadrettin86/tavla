@@ -100,16 +100,49 @@ export class DiceView {
       const dy = -s * (1.4 + i * 0.5);
       const cube = w.querySelector('.die');
       const r0 = [360 + Math.random() * 540, 360 + Math.random() * 540, Math.random() * 360];
-      cube.animate([{ transform: rot(r0) }, { transform: rot(FINAL[i % 2]) }], { duration: 760 + i * 60, easing: 'cubic-bezier(.12,.72,.24,1)' });
-      return w.animate([
+      cube.animate([{ transform: rot(r0) }, { transform: rot(FINAL[i % 2]) }], { duration: (opts.rim ? 900 : 760) + i * 60, easing: 'cubic-bezier(.12,.72,.24,1)' });
+      // rim: zarlar karşı kenara çarpıp geri seker
+      const k = opts.rim ? [
+        { transform: `translate(${dx}px, ${dy}px)`, opacity: 0 },
+        { transform: `translate(${dx * 0.35}px, ${dy * 0.15}px)`, opacity: 1, offset: 0.32 },
+        { transform: `translate(${-dx * 0.42}px, ${-s * 0.1}px)`, offset: 0.52 },
+        { transform: `translate(${-dx * 0.12}px, ${-s * 0.25}px)`, offset: 0.7 },
+        { transform: 'translate(0px, 0px)', offset: 0.84 },
+        { transform: `translate(0px, ${-s * 0.08}px)`, offset: 0.92 },
+        { transform: 'translate(0px, 0px)' },
+      ] : [
         { transform: `translate(${dx}px, ${dy}px)`, opacity: 0 },
         { transform: `translate(${dx * 0.35}px, ${dy * 0.15}px)`, opacity: 1, offset: 0.4 },
         { transform: 'translate(0px, 0px)', offset: 0.72 },
         { transform: `translate(0px, ${-s * 0.18}px)`, offset: 0.84 },
         { transform: 'translate(0px, 0px)' },
-      ], { duration: 760 + i * 60, easing: 'cubic-bezier(.2,.6,.35,1)' }).finished;
+      ];
+      return w.animate(k, { duration: (opts.rim ? 900 : 760) + i * 60, easing: 'cubic-bezier(.2,.6,.35,1)' }).finished;
     });
     await Promise.all(anims);
+  }
+
+  // Çift: zarlar parlar, etraflarından altın kıvılcımlar fışkırır
+  lucky() {
+    const ws = [...this.layer.querySelectorAll('.die-wrap')];
+    for (const w of ws) {
+      w.classList.remove('lucky'); void w.offsetWidth; w.classList.add('lucky');
+      setTimeout(() => w.classList.remove('lucky'), 2100);
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) continue;
+      const b = w.getBoundingClientRect(), cx = b.left + b.width / 2, cy = b.top + b.height / 2;
+      for (let i = 0; i < 14; i++) {
+        const d = document.createElement('div');
+        d.className = 'fx-spark';
+        d.style.left = cx + 'px'; d.style.top = cy + 'px';
+        if (i % 3 === 0) d.style.background = '#fff';
+        document.body.appendChild(d);
+        const a = Math.random() * Math.PI * 2, dist = b.width * (0.9 + Math.random() * 1.4);
+        d.animate([
+          { transform: 'translate(0,0) scale(1)', opacity: 1 },
+          { transform: `translate(${Math.cos(a) * dist}px, ${Math.sin(a) * dist - b.width * 0.4}px) scale(0.2)`, opacity: 0 },
+        ], { duration: 650 + Math.random() * 400, easing: 'cubic-bezier(.1,.7,.3,1)', fill: 'forwards' }).finished.then(() => d.remove(), () => d.remove());
+      }
+    }
   }
 
   // açılış zarları: izleyicinin zarı sağda, rakibinki solda

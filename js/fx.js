@@ -46,7 +46,7 @@ export function toast(stage, text, ms = 1800) {
   setTimeout(() => t.remove(), ms + 400);
 }
 
-export function confetti(root, ms = 3200) {
+export function confetti(root, ms = 3200, { count = 170, cannons = false, gold = false } = {}) {
   const cv = document.createElement('canvas');
   cv.className = 'fx-confetti';
   const dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -55,9 +55,21 @@ export function confetti(root, ms = 3200) {
   root.appendChild(cv);
   const ctx = cv.getContext('2d');
   ctx.scale(dpr, dpr);
-  const colors = ['#f2bb4e', '#e2572f', '#f6ead6', '#56b8ae', '#ffd98a', '#b8452b'];
+  const colors = gold ? ['#ffd45e', '#f2bb4e', '#fff6cf', '#e79a1d', '#ffcf55', '#ffffff'] : ['#f2bb4e', '#e2572f', '#f6ead6', '#56b8ae', '#ffd98a', '#b8452b'];
   const P = [];
-  for (let i = 0; i < 170; i++) {
+  // alt köşelerden fışkıran toplar
+  if (cannons) {
+    for (let i = 0; i < count * 0.5; i++) {
+      const left = i % 2 === 0, sp = 9 + Math.random() * 9, ang = (left ? -1 : -1) * (Math.PI / 2) + (left ? 0.35 : -0.35) + (Math.random() - 0.5) * 0.5;
+      P.push({
+        x: left ? 0 : W, y: H, vx: Math.cos(ang) * sp * (left ? 1 : 1), vy: Math.sin(ang) * sp, g: 0.22,
+        r: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.35,
+        w: 5 + Math.random() * 6, h: 8 + Math.random() * 10, c: colors[i % colors.length],
+        s: Math.random() < 0.2 ? 'c' : 'r', ph: Math.random() * 6.28,
+      });
+    }
+  }
+  for (let i = 0; i < count; i++) {
     P.push({
       x: Math.random() * W, y: -20 - Math.random() * H * 0.6,
       vx: (Math.random() - 0.5) * 1.6, vy: 1.5 + Math.random() * 2.8,
@@ -72,6 +84,7 @@ export function confetti(root, ms = 3200) {
     ctx.clearRect(0, 0, W, H);
     ctx.globalAlpha = el > ms - 600 ? Math.max(0, (ms - el) / 600) : 1;
     for (const p of P) {
+      if (p.g) { p.vy += p.g; p.vx *= 0.99; if (p.vy > 3.5) { p.vy = 3.5; p.g = 0; } }
       p.x += p.vx + Math.sin((t / 400) + p.ph) * 0.6; p.y += p.vy; p.r += p.vr;
       ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c;
       if (p.s === 'c') { ctx.beginPath(); ctx.arc(0, 0, p.w * 0.4, 0, 6.28); ctx.fill(); }

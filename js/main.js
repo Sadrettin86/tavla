@@ -927,13 +927,16 @@ class App {
         break;
       }
       case 'roll': {
-        this.sound.dice();
+        const rim = Math.random() < 0.4;
+        this.sound.dice(rim);
         const side = a.by === this.viewer() ? 'right' : 'left';
         this.diceAnimating = true;
-        try { await this.dice.roll(a.dice, { side }); } finally { this.diceAnimating = false; }
+        try { await this.dice.roll(a.dice, { side, rim }); } finally { this.diceAnimating = false; }
         const nm = diceName(a.dice[0], a.dice[1]);
         if (a.dice[0] === a.dice[1]) {
           this.sound.doubles();
+          this.dice.lucky();
+          this.board.punch(0.35);
           FX.banner(stage, upperTR(nm) + '!', `${a.dice[0]} · ${a.dice[1]} — dört hamle`);
         } else this.namePill(nm, side);
         this.maybeAutoPass(a.by);
@@ -942,7 +945,7 @@ class App {
       case 'move':
         this.sound.slide();
         await this.board.animateMove(a.m, a.by, { board: before }, {
-          onLand: (off) => (off ? this.sound.bearOff() : this.sound.place()),
+          onLand: (off, kind, last) => (last ? this.sound.lastOff() : off ? this.sound.bearOff() : this.sound.place(kind)),
           onHit: (x, y) => {
             this.sound.hit();
             this.board.burst(x, y, THEMES[G.theme].danger);
@@ -1019,8 +1022,8 @@ class App {
       const meWon = this.mode !== 'online' || winner === this.myColor;
       const spectator = this.spectator();
       if (a.mars) this.sound.mars();
-      await wait(a.mars ? 450 : 150);
-      if (meWon || spectator) { this.sound.win(); FX.confetti(document.body); }
+      await wait(a.mars ? 1500 : 150);
+      if (meWon || spectator) { this.sound.win(); FX.confetti(document.body, a.mars ? 5200 : 3600, { count: a.mars ? 340 : 200, cannons: true, gold: !!a.mars }); }
       else this.sound.lose();
       let word, tone = 'gold';
       if (this.mode === 'online' && !spectator) { word = meWon ? 'KAZANDIN!' : 'KAYBETTİN'; tone = meWon ? 'gold' : 'red'; }

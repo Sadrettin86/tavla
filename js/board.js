@@ -149,6 +149,7 @@ export class BoardView {
     for (const c of ['w', 'b']) for (let i = used[c]; i < 15; i++) this.pool[c][i].style.display = 'none';
     for (const e of order) this.lChk.appendChild(e);
     this.drawOff(b.off);
+    this.markBarWait(G);
   }
 
   // toplanan pullar (tepside yatık)
@@ -493,6 +494,58 @@ export class BoardView {
     if (navigator.vibrate) try { navigator.vibrate(k > 0.8 ? [40, 30, 60] : 25); } catch (e) { /* yok say */ }
   }
 
+  // Kapı: iki pulu saran altın halka ve parıltı
+  doorFx(a, b) {
+    if (!this.T || reducedMotion() || !a || !b) return;
+    const r = this.g.r, x = (a._x + b._x) / 2, y = (a._y + b._y) / 2;
+    const vert = Math.abs(a._y - b._y) > Math.abs(a._x - b._x);
+    const g = el('g', { transform: `translate(${F(x)} ${F(y)})` });
+    this.lFx.appendChild(g);
+    const rx = vert ? r * 1.25 : r * 2.2, ry = vert ? r * 2.2 : r * 1.25;
+    for (const [k, w, op] of [[0, 3, 1], [120, 1.6, 0.6]]) {
+      const ring = el('ellipse', { rx: F(rx), ry: F(ry), fill: 'none', stroke: '#ffd45e', 'stroke-width': w, 'stroke-opacity': op });
+      g.appendChild(ring);
+      ring.animate([{ transform: 'scale(0.75)', opacity: 0 }, { transform: 'scale(1)', opacity: 1, offset: 0.25 }, { transform: 'scale(1.35)', opacity: 0 }], { duration: 900, delay: k, easing: 'ease-out', fill: 'backwards' });
+    }
+    const glow = el('ellipse', { rx: F(rx * 0.9), ry: F(ry * 0.9), fill: '#ffd45e', 'fill-opacity': '0.25' });
+    g.insertBefore(glow, g.firstChild);
+    glow.animate([{ opacity: 0 }, { opacity: 1, offset: 0.2 }, { opacity: 0 }], { duration: 800, fill: 'forwards' });
+    this.sparkle(x, y, '#ffd45e', 10);
+    setTimeout(() => g.remove(), 1200);
+  }
+
+  // Son pul: ekran kararır, pul ağır çekimde uçar
+  slowmo(ms) {
+    const d = document.createElement('div');
+    d.className = 'slowmo';
+    (this.wrap.closest('.stage') || this.wrap).appendChild(d);
+    d.animate([{ opacity: 0 }, { opacity: 1, offset: 0.2 }, { opacity: 1, offset: 0.8 }, { opacity: 0 }], { duration: ms + 300, fill: 'forwards' }).finished.then(() => d.remove(), () => d.remove());
+  }
+
+  // Son pul tepsiye inince altın patlama
+  finale(x, y) {
+    if (reducedMotion()) return;
+    for (let i = 0; i < 3; i++) setTimeout(() => this.ripple(x, y, this.T.accent, true), i * 140);
+    this.sparkle(x, y, '#ffd45e', 18);
+    this.sparkle(x, y, '#fff', 10);
+    this.punch(0.7);
+  }
+
+  // Kırık yerde girmeyi bekleyen pullar: kırmızı nabız
+  markBarWait(G) {
+    for (const x of this.lUnder.querySelectorAll('.bar-wait')) x.remove();
+    for (const e of this.lChk.querySelectorAll('.chk.waiting')) e.classList.remove('waiting');
+    if (!G || G.phase !== 'move' && G.phase !== 'roll' || !this.T) return;
+    const c = G.turn, st = this.stacks['bar' + c] || [];
+    if (!st.length) return;
+    const r = this.g.r;
+    for (const e of st) {
+      e.classList.add('waiting');
+      const ring = el('circle', { class: 'bar-wait', cx: F(e._x), cy: F(e._y), r: F(r * 1.15), fill: this.T.danger, 'fill-opacity': '0.18', stroke: this.T.danger, 'stroke-width': '2' });
+      this.lUnder.appendChild(ring);
+    }
+  }
+
   // Kırılma anı: parlama, kıymıklar
   smash(x, y, color) {
     if (!this.T || reducedMotion()) return;
@@ -559,8 +612,11 @@ export class BoardView {
       dest = this.slot(m.to, own ? cnt : 0, own ? cnt + 1 : 1);
     }
     const dist = Math.hypot(dest.x - e._x, dest.y - e._y);
-    const dur = Math.round(Math.min(860, 440 + dist * 0.95));
-    const h = Math.min(90, 22 + dist * 0.3);
+    // oyunun son pulu: ağır çekim
+    const last = m.to === 'off' && b.off[c] === 14 && !reducedMotion();
+    let dur = Math.round(Math.min(860, 440 + dist * 0.95));
+    let h = Math.min(90, 22 + dist * 0.3);
+    if (last) { dur = Math.round(dur * 2.6); h = h * 1.8 + 30; this.slowmo(dur); }
     // kalkarken: kaynak yığındaki alttaki pul hafifçe sarsılır
     const src = this.stacks[m.from === 'bar' ? 'bar' + c : 'p' + m.from] || [];
     this.nudge(src[src.length - 2], 0);
@@ -593,14 +649,17 @@ export class BoardView {
         });
       });
     }
+    const kind = m.to === 'off' || m.hit || !destStack.length ? 'single' : destStack.length === 1 ? 'door' : 'stack';
     const landed = wait(dur * 0.86).then(() => {
       this.ripple(dest.x, dest.y, m.hit ? this.T.danger : m.to === 'off' ? this.T.accent : this.T.accentSoft, m.to === 'off' || m.hit);
       this.sparkle(dest.x, dest.y, m.to === 'off' ? this.T.accent : '#fff3cf', m.to === 'off' ? 12 : 9);
       // hedefteki yığın yukarıdan aşağı sarsılır
       destStack.slice().reverse().forEach((x, i) => { if (!m.hit && i < 4) setTimeout(() => this.nudge(x, i === 0 ? 1 : 0), i * 45); });
-      onLand && onLand(m.to === 'off');
+      if (kind === 'door') this.doorFx(destStack[0], e);
+      if (last) this.finale(dest.x, dest.y);
+      onLand && onLand(m.to === 'off', kind, last);
     });
-    await this.fly(e, dest.x, dest.y, { dur, h, end: m.to === 'off' ? 'slab' : 'land', streak: m.to === 'off' ? this.T.accent : this.T.accentSoft });
+    await this.fly(e, dest.x, dest.y, { dur, h, lift: last ? 1.7 : 1.32, end: m.to === 'off' ? 'slab' : 'land', streak: m.to === 'off' ? this.T.accent : this.T.accentSoft });
     await landed;
     await hitDone;
   }
