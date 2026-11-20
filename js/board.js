@@ -457,56 +457,84 @@ export class BoardView {
     g.appendChild(hl); g.appendChild(path);
     for (const p of [path, hl]) p.animate([{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], { duration: 160, easing: 'ease-out', fill: 'forwards' });
     g.animate([{ opacity: 1 }, { opacity: 1, offset: 0.55 }, { opacity: 0 }], { duration: 2200, fill: 'forwards' }).finished.then(() => g.remove(), () => g.remove());
-    // toz
-    for (let i = 0; i < 8; i++) {
-      const a = Math.random() * Math.PI * 2, dist = r * (1 + Math.random() * 1.6);
-      const puff = el('circle', { r: F(r * (0.5 + Math.random() * 0.4)), fill: '#e8d2b0', 'fill-opacity': '0.45' });
-      g.appendChild(puff);
-      puff.animate([
-        { transform: 'translate(0px, 0px) scale(0.3)', opacity: 0.9 },
-        { transform: `translate(${F(Math.cos(a) * dist)}px, ${F(Math.sin(a) * dist - r * 0.8)}px) scale(1.8)`, opacity: 0 },
-      ], { duration: 700 + Math.random() * 400, easing: 'cubic-bezier(.1,.7,.3,1)', fill: 'forwards' });
-    }
   }
 
-  // Kırmada yükselen duman bulutu: yumuşak kenarlı, yayılıp yukarı süzülür
+  // Kırmada ateş ve kara duman: dipte alev parıltısı, yukarı savrulan közler, kıvrılarak yükselen is
   smoke(x, y, k = 1) {
     if (!this.T || reducedMotion()) return;
     const r = this.g.r;
     if (!this.defs.querySelector('#smokeD')) {
-      for (const [id, col] of [['smokeD', '#4a4038'], ['smokeL', '#d9cbb6']]) {
+      const grad = (id, stops) => {
         const gr = el('radialGradient', { id });
-        gr.appendChild(el('stop', { offset: '0', 'stop-color': col, 'stop-opacity': '0.85' }));
-        gr.appendChild(el('stop', { offset: '0.55', 'stop-color': col, 'stop-opacity': '0.45' }));
-        gr.appendChild(el('stop', { offset: '1', 'stop-color': col, 'stop-opacity': '0' }));
+        for (const [o, c, a] of stops) gr.appendChild(el('stop', { offset: o, 'stop-color': c, 'stop-opacity': a }));
         this.defs.appendChild(gr);
-      }
+      };
+      grad('smokeD', [['0', '#16110e', '0.9'], ['0.5', '#221a15', '0.55'], ['1', '#2a211b', '0']]);
+      grad('smokeM', [['0', '#3b322c', '0.8'], ['0.55', '#4a403a', '0.4'], ['1', '#554a43', '0']]);
+      grad('fireG', [['0', '#fff3c4', '1'], ['0.25', '#ffb02e', '0.95'], ['0.6', '#e8461a', '0.6'], ['1', '#a01a08', '0']]);
     }
-    const g = el('g', { transform: `translate(${F(x)} ${F(y)})`, class: 'smoke' });
+    // dikey ekranda tahta döndürülmüş: duman yine ekranın yukarısına çıksın
+    const m = getComputedStyle(this.wrap).transform;
+    let deg = 0;
+    if (m && m !== 'none') { const v = m.match(/matrix\(([^)]+)\)/); if (v) { const [ma, mb] = v[1].split(',').map(Number); deg = Math.atan2(mb, ma) * 180 / Math.PI; } }
+    const g = el('g', { transform: `translate(${F(x)} ${F(y)}) rotate(${F(-deg)})`, class: 'smoke' });
     this.lFx.insertBefore(g, this.lFx.firstChild);
-    const n = Math.round(36 * k);
     let longest = 0;
+    // kara duman: dar bir sütun halinde yükselir, yukarıda açılır, hafifçe sağa sola kıvrılır
+    const n = Math.round(30 * k);
+    const sway = (Math.random() < 0.5 ? -1 : 1) * r * (0.8 + Math.random());
     for (let i = 0; i < n; i++) {
-      const a = Math.random() * Math.PI * 2, dist = r * (0.6 + Math.random() * 3.2) * (0.6 + k * 0.4);
-      const rise = r * (1.5 + Math.random() * 3.5) * k;
-      const size = r * (1.1 + Math.random() * 1.1);
-      const puff = el('circle', { r: F(size), fill: `url(#${i % 3 ? 'smokeD' : 'smokeL'})` });
+      const q = i / n;
+      const rise = r * (4 + Math.random() * 4.5);
+      const size = r * (0.7 + Math.random() * 0.7);
+      const puff = el('circle', { r: F(size), fill: `url(#${i % 3 ? 'smokeD' : 'smokeM'})` });
       g.appendChild(puff);
-      const dur = 2200 + Math.random() * 1600, delay = Math.random() * 260;
+      const dur = 2200 + Math.random() * 1500, delay = q * 900 + Math.random() * 120;
       longest = Math.max(longest, dur + delay);
-      const ex = Math.cos(a) * dist, ey = Math.sin(a) * dist * 0.7;
-      const s1 = 2.4 + Math.random() * 1.8;
+      const x0 = (Math.random() - 0.5) * r * 0.8;
+      const w1 = (Math.random() - 0.5) * r * 1.2, w2 = (Math.random() - 0.5) * r * 2.6;
+      const s1 = 2.6 + Math.random() * 1.6;
       puff.animate([
-        { transform: 'translate(0px, 0px) scale(0.25)', opacity: 0 },
-        { transform: `translate(${F(ex * 0.55)}px, ${F(ey * 0.55)}px) scale(1.1)`, opacity: 0.95, offset: 0.12 },
-        { transform: `translate(${F(ex * 0.9)}px, ${F(ey * 0.9 - rise * 0.45)}px) scale(${F(s1 * 0.7)})`, opacity: 0.8, offset: 0.45 },
-        { transform: `translate(${F(ex + (Math.random() - 0.5) * r)}px, ${F(ey - rise)}px) scale(${F(s1)})`, opacity: 0 },
-      ], { duration: dur, delay, easing: 'cubic-bezier(.15,.65,.35,1)', fill: 'both' });
+        { transform: `translate(${F(x0)}px, 0px) scale(0.3)`, opacity: 0 },
+        { transform: `translate(${F(x0 + w1)}px, ${F(-rise * 0.25)}px) scale(0.9)`, opacity: 0.9, offset: 0.15 },
+        { transform: `translate(${F(x0 + sway * 0.5 + w1)}px, ${F(-rise * 0.6)}px) scale(${F(s1 * 0.6)})`, opacity: 0.7, offset: 0.5 },
+        { transform: `translate(${F(x0 + sway + w2)}px, ${F(-rise)}px) scale(${F(s1)})`, opacity: 0 },
+      ], { duration: dur, delay, easing: 'cubic-bezier(.3,.2,.5,1)', fill: 'both' });
     }
-    // yere yayılan toz halkası
-    const ring = el('ellipse', { rx: F(r * 1.2), ry: F(r * 0.7), fill: 'url(#smokeL)' });
-    g.appendChild(ring);
-    ring.animate([{ transform: 'scale(0.4)', opacity: 0.9 }, { transform: `scale(${F(4.5 * k)})`, opacity: 0 }], { duration: 900, easing: 'cubic-bezier(.1,.7,.3,1)', fill: 'forwards' });
+    // alev parıltısı: titreyerek söner
+    const fire = el('circle', { r: F(r * 1.5), fill: 'url(#fireG)' });
+    g.appendChild(fire);
+    const fk = [];
+    for (let i = 0; i <= 10; i++) {
+      const f = 1 - i / 10;
+      fk.push({ transform: `scale(${F((0.7 + Math.random() * 0.5) * (0.6 + f * 0.8))}, ${F((0.8 + Math.random() * 0.6) * (0.6 + f * 0.9))})`, opacity: i === 10 ? 0 : 0.6 + f * 0.4 * Math.random() + 0.2 * f });
+    }
+    fire.animate(fk, { duration: 900, easing: 'linear', fill: 'forwards' });
+    // dil dil alevler
+    for (let i = 0; i < 5; i++) {
+      const h = r * (1.6 + Math.random() * 1.4), w = r * (0.45 + Math.random() * 0.3);
+      const fl = el('path', { d: `M${F(-w)} 0 Q${F(-w)} ${F(-h * 0.5)} 0 ${F(-h)} Q${F(w)} ${F(-h * 0.5)} ${F(w)} 0 Z`, fill: i % 2 ? '#ff8a1e' : '#ffd25a', 'fill-opacity': '0.85' });
+      const fx = (i - 2) * r * 0.42 + (Math.random() - 0.5) * r * 0.3;
+      g.appendChild(fl);
+      fl.animate([
+        { transform: `translate(${F(fx)}px, 0px) scale(0.2, 0.1)`, opacity: 0 },
+        { transform: `translate(${F(fx)}px, 0px) scale(1, 1)`, opacity: 1, offset: 0.2 },
+        { transform: `translate(${F(fx + (Math.random() - 0.5) * r * 0.4)}px, ${F(-r * 0.2)}px) scale(0.8, 1.25)`, opacity: 0.9, offset: 0.45 },
+        { transform: `translate(${F(fx)}px, ${F(-r * 0.5)}px) scale(0.3, 0.6)`, opacity: 0 },
+      ], { duration: 650 + Math.random() * 350, delay: i * 40, easing: 'ease-out', fill: 'both' });
+    }
+    // közler: kıvılcımlar yukarı savrulur, kararıp söner
+    for (let i = 0; i < 18; i++) {
+      const e = el('circle', { r: F(r * (0.06 + Math.random() * 0.07)), fill: Math.random() < 0.5 ? '#ffcf5a' : '#ff7a1a' });
+      g.appendChild(e);
+      const ex = (Math.random() - 0.5) * r * 5, ey = -r * (2.5 + Math.random() * 5);
+      const d = 900 + Math.random() * 900;
+      e.animate([
+        { transform: 'translate(0px, 0px)', opacity: 1 },
+        { transform: `translate(${F(ex * 0.6)}px, ${F(ey * 0.7)}px)`, opacity: 1, offset: 0.5 },
+        { transform: `translate(${F(ex)}px, ${F(ey)}px)`, opacity: 0 },
+      ], { duration: d, delay: Math.random() * 300, easing: 'cubic-bezier(.2,.7,.4,1)', fill: 'both' });
+    }
     setTimeout(() => g.remove(), longest + 100);
   }
 
@@ -684,7 +712,6 @@ export class BoardView {
           this.sparkle(bs.x, bs.y, this.T.danger, 14);
           this.smash(bs.x, bs.y, opp);
           this.crack(bs.x, bs.y);
-          this.smoke(bs.x, bs.y, 0.6);
           this.nudge(victim, 1);
           this.shake(1.6);
           this.punch(0.5);
