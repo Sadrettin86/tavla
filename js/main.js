@@ -1022,7 +1022,7 @@ class App {
       const meWon = this.mode !== 'online' || winner === this.myColor;
       const spectator = this.spectator();
       if (a.mars) this.sound.mars();
-      await wait(a.mars ? 1500 : 150);
+      await wait(a.mars ? 450 : 150);
       if (meWon || spectator) { this.sound.win(); FX.confetti(document.body, a.mars ? 5200 : 3600, { count: a.mars ? 340 : 200, cannons: true, gold: !!a.mars }); }
       else this.sound.lose();
       let word, tone = 'gold';

@@ -469,6 +469,47 @@ export class BoardView {
     }
   }
 
+  // Kırmada yükselen duman bulutu: yumuşak kenarlı, yayılıp yukarı süzülür
+  smoke(x, y, k = 1) {
+    if (!this.T || reducedMotion()) return;
+    const r = this.g.r;
+    if (!this.defs.querySelector('#smokeD')) {
+      for (const [id, col] of [['smokeD', '#4a4038'], ['smokeL', '#d9cbb6']]) {
+        const gr = el('radialGradient', { id });
+        gr.appendChild(el('stop', { offset: '0', 'stop-color': col, 'stop-opacity': '0.85' }));
+        gr.appendChild(el('stop', { offset: '0.55', 'stop-color': col, 'stop-opacity': '0.45' }));
+        gr.appendChild(el('stop', { offset: '1', 'stop-color': col, 'stop-opacity': '0' }));
+        this.defs.appendChild(gr);
+      }
+    }
+    const g = el('g', { transform: `translate(${F(x)} ${F(y)})`, class: 'smoke' });
+    this.lFx.insertBefore(g, this.lFx.firstChild);
+    const n = Math.round(36 * k);
+    let longest = 0;
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, dist = r * (0.6 + Math.random() * 3.2) * (0.6 + k * 0.4);
+      const rise = r * (1.5 + Math.random() * 3.5) * k;
+      const size = r * (1.1 + Math.random() * 1.1);
+      const puff = el('circle', { r: F(size), fill: `url(#${i % 3 ? 'smokeD' : 'smokeL'})` });
+      g.appendChild(puff);
+      const dur = 2200 + Math.random() * 1600, delay = Math.random() * 260;
+      longest = Math.max(longest, dur + delay);
+      const ex = Math.cos(a) * dist, ey = Math.sin(a) * dist * 0.7;
+      const s1 = 2.4 + Math.random() * 1.8;
+      puff.animate([
+        { transform: 'translate(0px, 0px) scale(0.25)', opacity: 0 },
+        { transform: `translate(${F(ex * 0.55)}px, ${F(ey * 0.55)}px) scale(1.1)`, opacity: 0.95, offset: 0.12 },
+        { transform: `translate(${F(ex * 0.9)}px, ${F(ey * 0.9 - rise * 0.45)}px) scale(${F(s1 * 0.7)})`, opacity: 0.8, offset: 0.45 },
+        { transform: `translate(${F(ex + (Math.random() - 0.5) * r)}px, ${F(ey - rise)}px) scale(${F(s1)})`, opacity: 0 },
+      ], { duration: dur, delay, easing: 'cubic-bezier(.15,.65,.35,1)', fill: 'both' });
+    }
+    // yere yayılan toz halkası
+    const ring = el('ellipse', { rx: F(r * 1.2), ry: F(r * 0.7), fill: 'url(#smokeL)' });
+    g.appendChild(ring);
+    ring.animate([{ transform: 'scale(0.4)', opacity: 0.9 }, { transform: `scale(${F(4.5 * k)})`, opacity: 0 }], { duration: 900, easing: 'cubic-bezier(.1,.7,.3,1)', fill: 'forwards' });
+    setTimeout(() => g.remove(), longest + 100);
+  }
+
   // Tahta darbe anında öne doğru büyüyüp geri oturur
   punch(k = 1) {
     if (reducedMotion()) return;
@@ -632,6 +673,7 @@ export class BoardView {
         const opp = c === 'w' ? 'b' : 'w';
         this.smash(dest.x, dest.y, opp);
         this.crack(dest.x, dest.y);
+        this.smoke(dest.x, dest.y, 1);
         this.shake(3);
         this.punch(1);
         this.flashScreen();
@@ -642,6 +684,7 @@ export class BoardView {
           this.sparkle(bs.x, bs.y, this.T.danger, 14);
           this.smash(bs.x, bs.y, opp);
           this.crack(bs.x, bs.y);
+          this.smoke(bs.x, bs.y, 0.6);
           this.nudge(victim, 1);
           this.shake(1.6);
           this.punch(0.5);

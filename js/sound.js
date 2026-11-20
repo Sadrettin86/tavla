@@ -226,7 +226,7 @@ export class Sound {
       this.impact(t, 'chkChk', kind === 'door' ? 1.05 : 0.85);
       this.impact(t + 0.006, 'chkWood', 0.45);
       this.impact(t + 0.034, 'chkChk', 0.16);
-      if (kind === 'door') { this.boom(t, 0.22); this.pluck(t + 0.05, 587, 0.12, 0.9); this.pluck(t + 0.1, 880, 0.09, 1); }
+      if (kind === 'door') this.boom(t, 0.22);
     }
   }
 
@@ -239,55 +239,6 @@ export class Sound {
     const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
     o.connect(g).connect(this.master); o.connect(g).connect(this.verb); o.start(t); o.stop(t + 0.25);
     this.burst(t, { f: 700, q: 0.9, gain: 0.5, decay: 0.03, type: 'lowpass', len: 0.08 });
-  }
-
-  // --- saz tınısı
-  // İki tel (çift kurs) hafif akort farkıyla; parlak başlayıp hızla yumuşar, telin metalik vızıltısı.
-  pluck(t, f, gain = 0.15, len = 0.9) {
-    const c = this.ctx;
-    const out = c.createGain(); out.gain.value = 1;
-    const fl = c.createBiquadFilter(); fl.type = 'lowpass'; fl.Q.value = 2.5;
-    fl.frequency.setValueAtTime(Math.min(9000, f * 9), t);
-    fl.frequency.exponentialRampToValueAtTime(Math.max(500, f * 1.6), t + len * 0.5);
-    const g = c.createGain();
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(gain, t + 0.004);
-    g.gain.exponentialRampToValueAtTime(gain * 0.35, t + 0.12);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + len);
-    fl.connect(g).connect(out);
-    out.connect(this.master); out.connect(this.verb);
-    for (const [mul, type, lv] of [[1, 'sawtooth', 0.6], [1.004, 'sawtooth', 0.5], [2.002, 'square', 0.12]]) {
-      const o = c.createOscillator(); o.type = type;
-      o.frequency.setValueAtTime(f * mul * 1.012, t);
-      o.frequency.exponentialRampToValueAtTime(f * mul, t + 0.03); // mızrap: hafif perde düşüşü
-      const og = c.createGain(); og.gain.value = lv;
-      o.connect(og).connect(fl); o.start(t); o.stop(t + len + 0.05);
-    }
-    // mızrap tıkı
-    this.burst(t, { f: 3200, q: 1.5, gain: gain * 0.9, decay: 0.006, len: 0.02 });
-  }
-
-  // Hicaz dizisinde notalar (re'den): yarım ses adımları
-  hz(step) {
-    const H = [0, 1, 4, 5, 7, 8, 10]; // re mi♭ fa♯ sol la si♭ do
-    const oct = Math.floor(step / 7), i = ((step % 7) + 7) % 7;
-    return 293.66 * Math.pow(2, oct + H[i] / 12);
-  }
-
-  // Notaları sırayla çalar: [adım, süre(sn), güç]
-  phrase(t, notes, gain = 0.15) {
-    let tt = t;
-    for (const [st, d, k = 1, len = 0.9] of notes) {
-      if (st !== null) this.pluck(tt, this.hz(st), gain * k, len);
-      tt += d;
-    }
-    return tt;
-  }
-
-  // Tremolo: aynı notayı hızlı hızlı vurma
-  tremolo(t, step, n, gap = 0.055, gain = 0.12) {
-    for (let i = 0; i < n; i++) this.pluck(t + i * gap, this.hz(step), gain * (0.7 + 0.3 * Math.sin(i * 0.9)), 0.25);
-    return t + n * gap;
   }
 
   hit() {
@@ -312,8 +263,6 @@ export class Sound {
     this.impact(t + 0.79, 'chkChk', 0.3);
     this.boom(t + 0.76, 0.5);
     this.impact(t + 0.95, 'chkWood', 0.25);
-    // kısa saz vuruşu: inen hicaz motifi
-    this.phrase(t + 1.05, [[9, 0.09, 0.9, 0.4], [8, 0.09, 0.8, 0.4], [7, 0.09, 0.8, 0.4], [5, 0.22, 1, 0.8]], 0.12);
   }
 
   boom(t, k) {
@@ -349,48 +298,17 @@ export class Sound {
     this.tone(t + 0.13, { f: 880, type: 'sine', gain: 0.16, a: 0.01, decay: 0.5 });
   }
 
-  doubles() {
-    if (!this.ok) return;
-    const t = this.t;
-    // hızlı çıkan hicaz koşusu, tepede tremolo
-    const e = this.phrase(t, [[0, 0.06, 0.8, 0.4], [1, 0.06, 0.8, 0.4], [2, 0.06, 0.85, 0.4], [3, 0.06, 0.9, 0.4], [4, 0.06, 0.95, 0.4]], 0.14);
-    this.tremolo(e, 7, 8, 0.05, 0.12);
-    this.pluck(e + 0.42, this.hz(7), 0.16, 1.2);
-    this.pluck(e + 0.42, this.hz(4), 0.1, 1.2);
-  }
+  doubles() {}
 
-  win() {
-    if (!this.ok) return;
-    const t = this.t;
-    const e = this.phrase(t, [
-      [4, 0.14], [5, 0.14], [4, 0.14], [3, 0.14], [2, 0.28], [1, 0.14], [2, 0.14],
-      [3, 0.14], [4, 0.14], [5, 0.14], [6, 0.14], [7, 0.3, 1.1, 1.4],
-    ], 0.15);
-    // son akor: tel taraması
-    for (const [i, st] of [[0, 0], [1, 4], [2, 7], [3, 9]]) this.pluck(e + i * 0.035, this.hz(st), 0.13, 1.8);
-  }
+  win() {}
 
-  lose() {
-    if (!this.ok) return;
-    const t = this.t;
-    this.phrase(t, [[4, 0.32, 1, 1], [3, 0.32, 0.95, 1], [2, 0.32, 0.9, 1], [1, 0.5, 0.9, 1.2], [0, 0.1, 1, 1.8]], 0.12);
-  }
+  lose() {}
 
   mars() {
     if (!this.ok) return;
     const t = this.t;
     this.tone(t, { f: 70, f2: 40, gain: 0.7, decay: 0.35 });
     this.burst(t, { f: 900, q: 0.8, gain: 0.5, decay: 0.12, type: 'lowpass' });
-    const c = this.ctx;
-    for (const f of [131, 165, 196]) {
-      const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f;
-      const fl = c.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.setValueAtTime(400, t + 0.15); fl.frequency.exponentialRampToValueAtTime(1800, t + 0.5);
-      const g = c.createGain(); g.gain.setValueAtTime(0.0001, t + 0.15); g.gain.exponentialRampToValueAtTime(0.09, t + 0.25); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
-      o.connect(fl).connect(g).connect(this.master); o.start(t + 0.15); o.stop(t + 1.5);
-    }
-    // alt telde uzun tremolo, ardından sert vuruşlar
-    const e = this.tremolo(t + 0.2, -7, 18, 0.045, 0.14);
-    this.phrase(e, [[0, 0.16, 1.1, 0.6], [0, 0.16, 1.1, 0.6], [-7, 0.3, 1.2, 1.4]], 0.16);
   }
 
   pop() {
