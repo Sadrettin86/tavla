@@ -29,6 +29,9 @@ const lastRoom = {
   set(v) {
     try { (testMode() ? sessionStorage : localStorage).setItem('tavla:son', JSON.stringify(v)); } catch (e) { /* yok say */ }
   },
+  clear() {
+    try { (testMode() ? sessionStorage : localStorage).removeItem('tavla:son'); } catch (e) { /* yok say */ }
+  },
 };
 
 function clientId() {
@@ -104,7 +107,7 @@ class App {
     $('#gameList').addEventListener('click', (e) => {
       if (e.target.closest('button[data-cancel]')) { this.cancelWaiting(); return; }
       const del = e.target.closest('button[data-del]');
-      if (del) { this.deleteGame(del.dataset.del, del.dataset.who); return; }
+      if (del) { this.deleteGame(del.dataset.del, del.dataset.who, del.dataset.mine === '1'); return; }
       const b = e.target.closest('button[data-room]');
       if (b) this.joinFromList(b.dataset.room);
     });
@@ -148,6 +151,7 @@ class App {
     $('#mSound').addEventListener('click', () => this.toggleSound());
     $('#mFull').addEventListener('click', () => this.toggleFullscreen());
     $('#mResign').addEventListener('click', () => this.resign());
+    $('#mDelete').addEventListener('click', () => this.closeOwnGame());
     $('#mExit').addEventListener('click', async () => {
       $('#menu').hidden = true;
       if (this.G && (this.G.phase === 'move' || this.G.phase === 'roll') && !(await this.confirm('Oyundan çıkmak istiyor musun?'))) return;
@@ -294,7 +298,7 @@ class App {
       const meta = `${e.to || 5} sayılık maç · ${isOpen ? ago(e.t) : 'oynanıyor'}`;
       const av = isOpen ? checkerIcon(th, 'w', 30, 'gl' + e.id) : `<span class="gi-pair">${checkerIcon(th, 'w', 24, 'glw' + e.id)}${checkerIcon(th, 'b', 24, 'glb' + e.id)}</span>`;
       const action = e.mine ? btn(e, 'Katıl', 'primary') : isOpen ? btn(e, 'Katıl', 'primary') : btn(e, 'İzle', '', icon.eye(16));
-      const del = isOpen ? `<button type="button" class="gi-del" data-del="${e.id}" data-who="${esc(e.host || e.w || 'Oyuncu')}" aria-label="Oyunu sil">${icon.trash(18)}</button>` : '';
+      const del = !isOpen && e.mine ? `<button type="button" class="gi-del" data-del="${e.id}" data-mine="1" data-who="" aria-label="Oyunu sil">${icon.trash(18)}</button>` : isOpen ? `<button type="button" class="gi-del" data-del="${e.id}" data-who="${esc(e.host || e.w || 'Oyuncu')}" aria-label="Oyunu sil">${icon.trash(18)}</button>` : '';
       return `<li class="game-item${isOpen ? ' open' : ''}${e.mine ? ' mine' : ''}"><span class="gi-av">${av}</span><span class="gi-main"><b>${who}</b><span>${meta}</span></span>${action}${del}</li>`;
     };
     let html = '';
@@ -435,7 +439,8 @@ class App {
         // iki yer de dolu: sonradan gelen izleyici olur (adı aynı olsa bile kimsenin yerine oturamaz)
         return undefined;
       });
-      const G = await this.waitState(6000);
+      let G = await this.waitState(6000);
+      if (G && G.phase === 'closed') G = null;
       if (!G) {
         say(report ? 'Bu oyun artık yok.' : 'Bu oda bulunamadı. Linki kontrol et.');
         this.room.close(); this.room = null; this.mode = null; this.roomId = null;
@@ -539,10 +544,44 @@ class App {
     setTimeout(() => { $('#assist').hidden = true; }, 250);
   }
 
-  async deleteGame(id, who) {
+  async deleteGame(id, who, mine = false) {
+    if (mine) {
+      if (!(await this.confirm('Bu oyun silinsin mi? Maç bitmeden kapanır, rakibin de ana sayfaya döner.'))) return;
+      try { await this.closeRoomById(id); this.globalToast('Oyun silindi'); }
+      catch (e) { this.globalToast('Silinemedi, tekrar dene'); }
+      return;
+    }
     if (!(await this.confirm(`${who} oyununu listeden silmek istiyor musun?`))) return;
     try { await removeLobbyEntry(id); this.globalToast('Oyun silindi'); }
     catch (e) { this.globalToast('Silinemedi, tekrar dene'); }
+  }
+
+  // Oyundayken menüden: maçı kapat
+  async closeOwnGame() {
+    if (!this.room || this.mode !== 'online' || !this.myColor) return;
+    $('#menu').hidden = true;
+    if (!(await this.confirm('Bu oyun silinsin mi? Maç bitmeden kapanır, rakibin de ana sayfaya döner.'))) return;
+    const c = this.myColor;
+    try {
+      await this.room.unpublish();
+      await this.room.transact((G) => (G ? Rules.closeMatch(G, c) || undefined : undefined));
+    } catch (e) { this.globalToast('Silinemedi, tekrar dene'); }
+  }
+
+  // Listeden kendi süren oyununu sil: odaya sessizce bağlanıp kapatır
+  async closeRoomById(id) {
+    const noop = () => {};
+    const r = await connectRoom(id, { id: this.me.id, name: this.settings.name || 'Oyuncu' }, { onState: noop, onPresence: noop, onChat: noop, onConn: noop });
+    try {
+      await r.unpublish();
+      await r.transact((G) => {
+        if (!G) return undefined;
+        const c = G.players.w && G.players.w.id === this.me.id ? 'w' : G.players.b && G.players.b.id === this.me.id ? 'b' : null;
+        return c ? Rules.closeMatch(G, c) || undefined : undefined;
+      });
+    } finally { r.close(); }
+    const ls = lastRoom.get();
+    if (ls && ls.id === id) lastRoom.clear();
   }
 
   async cancelWaiting() {
@@ -654,6 +693,18 @@ class App {
   onState(G) {
     const waiters = this.stateWaiters; this.stateWaiters = [];
     if (!G) { waiters.forEach((f) => f()); return; }
+    if (G.phase === 'closed') {
+      // oyunculardan biri oyunu sildi: herkes ana sayfaya döner
+      const by = G.log && G.log.length ? G.log[G.log.length - 1].by : null;
+      const who = by && G.players[by] ? G.players[by].name : '';
+      const mine = by && by === this.myColor;
+      this.G = null;
+      lastRoom.clear();
+      if (waiters.length) { waiters.forEach((f) => f()); return; } // katılmaya çalışırken: joinRoom halleder
+      if (this.room) this.leave();
+      this.globalToast(mine ? 'Oyun silindi' : who ? `${who} oyunu sildi` : 'Oyun silindi', 3200);
+      return;
+    }
     const prev = this.G;
     this.G = G;
     this.updateSeat();
@@ -1194,6 +1245,7 @@ class App {
     $('#mFullTip').hidden = true;
     this.paintMenu();
     $('#mResign').hidden = this.spectator();
+    $('#mDelete').hidden = this.spectator() || this.mode !== 'online';
     $('#menu').hidden = false;
   }
 

@@ -179,14 +179,14 @@ class LocalRoom {
     if (N === null) return true;
     this.last = N;
     localStorage.setItem(this.k, JSON.stringify(N));
-    this.ch.postMessage({ t: 'state', G: N }); // durumu mesajla gönder: diğer sekmenin localStorage kopyası gecikebilir
+    this.post({ t: 'state', G: N }); // durumu mesajla gönder: diğer sekmenin localStorage kopyası gecikebilir
     this.h.onState(N);
     return true;
   }
   beat() {
     if (this.lobbyOn) writeLocalLobby((L) => { if (L[this.id]) L[this.id].on = { ...(L[this.id].on || {}), [this.me.id]: Date.now() }; });
     this.peers[this.me.id] = { name: this.me.name, color: this.me.color || '', last: Date.now() };
-    this.ch.postMessage({ t: 'hb', id: this.me.id, name: this.me.name, color: this.me.color || '' });
+    this.post({ t: 'hb', id: this.me.id, name: this.me.name, color: this.me.color || '' });
     this.emitPresence();
   }
   onMsg(m) {
@@ -219,13 +219,15 @@ class LocalRoom {
   }
   sendChat(msg) {
     const m = { ...msg, from: this.me.id, ts: Date.now() };
-    this.ch.postMessage({ t: 'chat', msg: m });
+    this.post({ t: 'chat', msg: m });
     this.h.onChat(m);
   }
+  post(m) { if (!this.closed) this.ch.postMessage(m); }
   close() {
     clearInterval(this.iv); clearInterval(this.iv2);
     if (this.lobbyOn) this.lobbyOnline(false);
-    this.ch.postMessage({ t: 'bye', id: this.me.id });
+    this.post({ t: 'bye', id: this.me.id });
+    this.closed = true;
     this.ch.close();
   }
 }

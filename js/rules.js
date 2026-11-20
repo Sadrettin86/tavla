@@ -380,6 +380,15 @@ export function resign(G0, c) {
   return G;
 }
 
+// Oyuncu maçı bitmeden kapatır: oda kapanır, herkes ana sayfaya döner
+export function closeMatch(G0, c) {
+  if (!G0 || G0.phase === 'closed') return null;
+  const G = copy(G0);
+  G.phase = 'closed';
+  stamp(G, { t: 'close', by: c });
+  return G;
+}
+
 export function nextGame(G0) {
   if (G0.phase !== 'gameover') return null;
   const G = copy(G0);
