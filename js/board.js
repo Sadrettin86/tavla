@@ -434,6 +434,65 @@ export class BoardView {
     }
   }
 
+  // Darbe noktasında tahtada çatlak izi ve toz bulutu
+  crack(x, y) {
+    if (!this.T || reducedMotion()) return;
+    const r = this.g.r;
+    const g = el('g', { transform: `translate(${F(x)} ${F(y)})`, class: 'crack' });
+    this.lUnder.appendChild(g);
+    let d = '';
+    for (let i = 0; i < 9; i++) {
+      let a = (i / 9) * Math.PI * 2 + Math.random() * 0.5, px = 0, py = 0;
+      d += `M0 0`;
+      const len = r * (1.6 + Math.random() * 2.2), seg = 4;
+      for (let k = 1; k <= seg; k++) {
+        a += (Math.random() - 0.5) * 0.7;
+        px += Math.cos(a) * len / seg; py += Math.sin(a) * len / seg;
+        d += ` L${F(px)} ${F(py)}`;
+      }
+    }
+    const path = el('path', { d, fill: 'none', stroke: '#1a0d06', 'stroke-width': F(r * 0.09), 'stroke-linecap': 'round', 'stroke-linejoin': 'round', pathLength: '1', 'stroke-dasharray': '1 1', 'stroke-opacity': '0.7' });
+    const hl = el('path', { d, fill: 'none', stroke: '#ffd9a0', 'stroke-width': F(r * 0.04), transform: 'translate(0.6 0.6)', pathLength: '1', 'stroke-dasharray': '1 1', 'stroke-opacity': '0.35' });
+    g.appendChild(hl); g.appendChild(path);
+    for (const p of [path, hl]) p.animate([{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], { duration: 160, easing: 'ease-out', fill: 'forwards' });
+    g.animate([{ opacity: 1 }, { opacity: 1, offset: 0.55 }, { opacity: 0 }], { duration: 2200, fill: 'forwards' }).finished.then(() => g.remove(), () => g.remove());
+    // toz
+    for (let i = 0; i < 8; i++) {
+      const a = Math.random() * Math.PI * 2, dist = r * (1 + Math.random() * 1.6);
+      const puff = el('circle', { r: F(r * (0.5 + Math.random() * 0.4)), fill: '#e8d2b0', 'fill-opacity': '0.45' });
+      g.appendChild(puff);
+      puff.animate([
+        { transform: 'translate(0px, 0px) scale(0.3)', opacity: 0.9 },
+        { transform: `translate(${F(Math.cos(a) * dist)}px, ${F(Math.sin(a) * dist - r * 0.8)}px) scale(1.8)`, opacity: 0 },
+      ], { duration: 700 + Math.random() * 400, easing: 'cubic-bezier(.1,.7,.3,1)', fill: 'forwards' });
+    }
+  }
+
+  // Tahta darbe anında öne doğru büyüyüp geri oturur
+  punch(k = 1) {
+    if (reducedMotion()) return;
+    const wb = getComputedStyle(this.wrap).transform, w0 = wb === 'none' ? '' : wb;
+    this.wrap.animate([
+      { transform: `${w0} scale(1)` },
+      { transform: `${w0} scale(${1 + 0.045 * k})`, offset: 0.18 },
+      { transform: `${w0} scale(${1 - 0.012 * k})`, offset: 0.5 },
+      { transform: `${w0} scale(1)` },
+    ], { duration: 420, easing: 'ease-out' });
+    // zarlar zıplar
+    for (const d of document.querySelectorAll('#diceLayer .die-wrap')) {
+      const base = getComputedStyle(d).transform;
+      const t0 = base === 'none' ? '' : base;
+      d.animate([
+        { transform: `${t0} translateY(0px)` },
+        { transform: `${t0} translateY(${-14 * k}px) rotate(${(Math.random() * 2 - 1) * 22}deg)`, offset: 0.35 },
+        { transform: `${t0} translateY(0px)`, offset: 0.7 },
+        { transform: `${t0} translateY(${-3 * k}px)`, offset: 0.85 },
+        { transform: `${t0} translateY(0px)` },
+      ], { duration: 520, easing: 'ease-out' });
+    }
+    if (navigator.vibrate) try { navigator.vibrate(k > 0.8 ? [40, 30, 60] : 25); } catch (e) { /* yok say */ }
+  }
+
   // Kırılma anı: parlama, kıymıklar
   smash(x, y, color) {
     if (!this.T || reducedMotion()) return;
@@ -449,8 +508,8 @@ export class BoardView {
       wave.animate([{ transform: 'scale(0.6)', opacity: 1 }, { transform: 'scale(5.2)', opacity: 0 }], { duration: 620, delay: k, easing: 'cubic-bezier(.15,.7,.3,1)', fill: 'backwards' }).finished.then(() => wave.remove(), () => {});
     }
     const vc = this.T[color] || {};
-    for (let i = 0; i < 22; i++) {
-      const a = (i / 22) * Math.PI * 2 + Math.random() * 0.4;
+    for (let i = 0; i < 30; i++) {
+      const a = (i / 30) * Math.PI * 2 + Math.random() * 0.4;
       const s = r * (0.2 + Math.random() * 0.32);
       const sh = el('polygon', { points: `0,${F(-s)} ${F(s * 0.8)},${F(s * 0.6)} ${F(-s * 0.7)},${F(s * 0.5)}`, fill: i % 3 ? (vc.base || '#fff') : this.T.danger, stroke: vc.rim || '#0006', 'stroke-width': '0.5' });
       g.appendChild(sh);
@@ -516,16 +575,20 @@ export class BoardView {
         onHit && onHit(dest.x, dest.y);
         const opp = c === 'w' ? 'b' : 'w';
         this.smash(dest.x, dest.y, opp);
-        this.shake(2.2);
+        this.crack(dest.x, dest.y);
+        this.shake(3);
+        this.punch(1);
         this.flashScreen();
         this.knock(dest.x, dest.y);
         const bs = this.barSlot(opp, b.bar[opp]);
-        return this.fly(victim, bs.x, bs.y, { dur: 900, h: 120, lift: 1.85, flips: 5, streak: this.T.danger }).then(() => {
+        return this.fly(victim, bs.x, bs.y, { dur: 950, h: 150, lift: 2.1, flips: 6, streak: this.T.danger }).then(() => {
           this.ripple(bs.x, bs.y, this.T.danger, true);
           this.sparkle(bs.x, bs.y, this.T.danger, 14);
           this.smash(bs.x, bs.y, opp);
+          this.crack(bs.x, bs.y);
           this.nudge(victim, 1);
-          this.shake(1.1);
+          this.shake(1.6);
+          this.punch(0.5);
           this.knock(bs.x, bs.y);
         });
       });

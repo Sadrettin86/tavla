@@ -231,9 +231,25 @@ export class Sound {
     fl.frequency.setValueAtTime(500, t + 0.03); fl.frequency.exponentialRampToValueAtTime(2600, t + 0.3);
     const g = c.createGain(); g.gain.setValueAtTime(0.0001, t + 0.03); g.gain.exponentialRampToValueAtTime(0.12, t + 0.12); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
     src.connect(fl).connect(g).connect(this.master); src.start(t + 0.03, 0.2, 0.45);
+    // gövdeden gelen tok darbe ve çatlama
+    this.boom(t, 1);
+    const cr = c.createBufferSource(); cr.buffer = this.noise;
+    const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1800;
+    const cg = c.createGain(); cg.gain.setValueAtTime(0.5, t); cg.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+    cr.connect(hp).connect(cg).connect(this.master); cr.start(t, 0.5, 0.12);
     // kenara düşüş
-    this.impact(t + 0.68, 'chkWood', 0.7);
-    this.impact(t + 0.71, 'chkChk', 0.25);
+    this.impact(t + 0.76, 'chkWood', 0.9);
+    this.impact(t + 0.79, 'chkChk', 0.3);
+    this.boom(t + 0.76, 0.5);
+    this.impact(t + 0.95, 'chkWood', 0.25);
+  }
+
+  boom(t, k) {
+    const c = this.ctx;
+    const o = c.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(36, t + 0.32);
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.75 * k, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.42);
+    o.connect(g).connect(this.master); o.start(t); o.stop(t + 0.45);
   }
 
   bearOff() {
