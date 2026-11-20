@@ -233,8 +233,8 @@ class App {
     if (name !== 'game') { $('#lafPanel').hidden = true; $('#menu').hidden = true; }
     if (name === 'lobby') this.startLobby(); else this.stopLobby();
     if (FS.scrollHide()) {
+      if (name !== 'game' || !document.documentElement.classList.contains('bar-hide')) window.scrollTo(0, 0);
       this.barHide();
-      if (name !== 'game') window.scrollTo(0, 0);
     }
   }
 
@@ -582,22 +582,34 @@ class App {
     this.barHide();
   }
 
-  // iPhone tarayıcısı: sayfayı biraz kaydırılabilir yapıp aşağı kaydırınca Safari/Chrome
-  // adres ve sekme çubuklarını küçültür; oyun ekranı sabit kalır, boşalan yere yayılır.
+  // iPhone tarayıcısı: Fullscreen API yok. Sayfayı biraz kaydırılabilir yapıyoruz; kullanıcı ekranı
+  // yukarı kaydırınca Chrome/Safari adres ve alt çubukları küçültür, oyun boşalan alana yayılır.
+  // Kod ile kaydırmak çubukları küçültmez, kaydırmayı kullanıcının parmağı yapmalı.
   barHide() {
     const on = FS.scrollHide() && document.body.dataset.screen === 'game';
+    const was = document.documentElement.classList.contains('bar-hide');
     document.documentElement.classList.toggle('bar-hide', on);
-    if (!on) return;
-    requestAnimationFrame(() => window.scrollTo(0, document.documentElement.scrollHeight));
-    if (!this._barTip) {
-      this._barTip = true;
-      try {
-        if (!localStorage.getItem('tavla:cubukIpucu')) {
-          localStorage.setItem('tavla:cubukIpucu', '1');
-          setTimeout(() => FX.toast(this.stage, 'Adres çubuğu kalırsa ekranı yukarı kaydır', 3200), 1500);
-        }
-      } catch (e) { /* yok say */ }
-    }
+    if (!on || was) return;
+    let shown = false;
+    try { shown = sessionStorage.getItem('tavla:cubukIpucu') === '1'; } catch (e) { /* yok say */ }
+    if (shown) return;
+    setTimeout(() => {
+      if (document.body.dataset.screen !== 'game' || window.scrollY > 20) return;
+      try { sessionStorage.setItem('tavla:cubukIpucu', '1'); } catch (e) { /* yok say */ }
+      this.swipeHint();
+    }, 1200);
+  }
+
+  // Yukarı kaydır ipucu: el işareti ile ok
+  swipeHint() {
+    const d = document.createElement('div');
+    d.className = 'swipe-hint';
+    d.innerHTML = '<div class="sh-arrow">↑</div><div class="sh-text">Tam ekran için ekranı yukarı kaydır</div>';
+    document.body.appendChild(d);
+    const done = () => { d.classList.add('out'); setTimeout(() => d.remove(), 400); window.removeEventListener('scroll', onScroll); };
+    const onScroll = () => { if (window.scrollY > 20) done(); };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    setTimeout(done, 6000);
   }
 
   async toggleFullscreen() {
