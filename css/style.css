@@ -259,9 +259,10 @@ input::placeholder { color: rgba(210, 191, 163, 0.7); }
   .rail-left, .rail-right { padding: 0 max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left)); }
   /* üstte iki ince ad kartı yan yana: tahtaya yer kalır */
   .rail-left { flex-direction: row; align-items: stretch; gap: 8px; }
-  .rail-left .pcard { flex: 1; padding: 6px 10px; border-radius: 13px; }
+  .rail-left .pslot { flex: 1; min-width: 0; }
+  .rail-left .pcard { padding: 6px 10px; border-radius: 13px; }
   .rail-left .pc-top svg { width: 22px; height: 22px; }
-  .rail-left #cardTop { order: 1; } .rail-left #cardBottom { order: 2; }
+  .rail-left #slotTop { order: 1; } .rail-left #slotBottom { order: 2; }
   .rail-right { flex-direction: row; align-items: center; flex-wrap: nowrap; }
   .rail-right .spacer { display: none; }
   .rail-right .btn { width: auto; }
@@ -456,3 +457,22 @@ input::placeholder { color: rgba(210, 191, 163, 0.7); }
 .laf-form input { flex: 1; min-width: 0; height: 44px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255, 236, 210, 0.09); color: inherit; font: inherit; font-size: 16px; }
 .laf-form .btn { height: 44px; min-height: 44px; padding: 0 14px; flex: none; }
 .reacts { justify-content: flex-start; gap: 10px; }
+
+/* ad kartının altındaki son mesajlar */
+.pslot { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+#slotBottom { flex-direction: column-reverse; }
+.msgs { display: flex; flex-direction: column; justify-content: flex-end; gap: 2px; height: 104px; overflow: hidden; padding: 5px 8px; border-radius: 11px; border: 1px solid rgba(255, 230, 200, 0.12); background: rgba(0, 0, 0, 0.22); font-size: 12px; line-height: 1.25; }
+.msgs:empty::before { content: 'Mesaj yok'; color: rgba(246, 234, 214, 0.32); align-self: center; margin: auto 0; font-size: 11.5px; }
+.msg { color: #f6ead6; overflow-wrap: anywhere; flex: none; }
+.msg:not(:last-child) { opacity: 0.55; }
+.msg .ic-r { display: inline-flex; vertical-align: -4px; color: #ffd98a; }
+.msg.new { animation: msgIn 0.35s ease-out; }
+.msgs.flash { animation: msgFlash 0.9s ease-out; }
+@keyframes msgIn { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes msgFlash { 0% { border-color: rgba(242, 187, 78, 0.9); background: rgba(242, 187, 78, 0.22); } 100% { border-color: rgba(255, 230, 200, 0.12); background: rgba(0, 0, 0, 0.22); } }
+@media (orientation: portrait) {
+  #slotBottom { flex-direction: column; }
+  .msgs { height: 52px; padding: 4px 8px; }
+  .msg { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .msg:not(:nth-last-child(-n+2)) { display: none; }
+}

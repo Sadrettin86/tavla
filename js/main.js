@@ -563,6 +563,7 @@ class App {
   }
 
   enterGame() {
+    if (this._msgRoom !== this.room) { this.clearMsgs(); this._msgRoom = this.room; }
     this.show('game');
     this.keepAwake();
     this.maybeFullscreen();
@@ -757,6 +758,7 @@ class App {
     main.classList.toggle('ready', ready);
     $('#btnUndo').disabled = !(my && G.phase === 'move' && G.moves.length > 0);
     $('#btnLaf').hidden = this.mode !== 'online' || this.spectator();
+    for (const sel of ['#msgsTop', '#msgsBottom']) $(sel).hidden = this.mode !== 'online';
     $('#btnSound').innerHTML = (this.settings.sound ? icon.sound : icon.mute)(20);
     $('#btnSound').setAttribute('aria-label', this.settings.sound ? 'Sesi kapat' : 'Sesi aç');
   }
@@ -1082,6 +1084,23 @@ class App {
     this.room.sendChat({ kind, text, color: this.myColor || '' });
   }
 
+  // ad kartının altındaki kutuya ekle (son 3 mesaj)
+  logMsg(c, m) {
+    const box = c === this.viewer() ? $('#msgsBottom') : $('#msgsTop');
+    if (!box) return;
+    const d = document.createElement('div');
+    d.className = 'msg new';
+    if (m.kind === 'react') {
+      if (!icon[m.text] || !REACTIONS.some((r) => r.key === m.text)) return;
+      d.innerHTML = `<span class="ic-r">${icon[m.text](18)}</span>`;
+    } else d.textContent = String(m.text || '').slice(0, 100);
+    box.appendChild(d);
+    while (box.children.length > 3) box.firstChild.remove();
+    box.classList.remove('flash'); void box.offsetWidth; box.classList.add('flash');
+  }
+
+  clearMsgs() { for (const s of ['#msgsTop', '#msgsBottom']) { const b = $(s); if (b) b.innerHTML = ''; } }
+
   onChat(m) {
     const G = this.G;
     if (!G || !m) return;
@@ -1090,7 +1109,7 @@ class App {
     if (!c || document.body.dataset.screen !== 'game') return;
     const anchor = c === this.viewer() ? $('#cardBottom') : $('#cardTop');
     if (m.kind === 'react' && icon[m.text] && REACTIONS.some((r) => r.key === m.text)) FX.floatIcon(anchor, icon[m.text](34));
-    else if (m.kind === 'phrase') FX.bubble(anchor, String(m.text || '').slice(0, 100));
+    this.logMsg(c, m);
     // karşıdan gelen mesajda MSN tarzı bildirim, kendi mesajında kısa tık
     if (m.from !== this.me.id) this.sound.msn(); else this.sound.pop();
   }

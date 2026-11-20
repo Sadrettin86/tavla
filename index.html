@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Tavla">
 <meta name="description" content="Online tavla. Oyun kur ya da açık bir oyuna katıl.">
-<meta name="tavla-version" content="202611201740">
+<meta name="tavla-version" content="202611201742">
 <title>Tavla</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -17,22 +17,22 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Ultra&display=swap">
-<link rel="stylesheet" href="css/style.css?v=202611201740">
+<link rel="stylesheet" href="css/style.css?v=202611201742">
 <script type="importmap">
 {
   "imports": {
-    "./js/board.js": "./js/board.js?v=202611201740",
-    "./js/dice.js": "./js/dice.js?v=202611201740",
-    "./js/firebase-config.js": "./js/firebase-config.js?v=202611201740",
-    "./js/fullscreen.js": "./js/fullscreen.js?v=202611201740",
-    "./js/fx.js": "./js/fx.js?v=202611201740",
-    "./js/icons.js": "./js/icons.js?v=202611201740",
-    "./js/main.js": "./js/main.js?v=202611201740",
-    "./js/names.js": "./js/names.js?v=202611201740",
-    "./js/net.js": "./js/net.js?v=202611201740",
-    "./js/rules.js": "./js/rules.js?v=202611201740",
-    "./js/sound.js": "./js/sound.js?v=202611201740",
-    "./js/theme.js": "./js/theme.js?v=202611201740"
+    "./js/board.js": "./js/board.js?v=202611201742",
+    "./js/dice.js": "./js/dice.js?v=202611201742",
+    "./js/firebase-config.js": "./js/firebase-config.js?v=202611201742",
+    "./js/fullscreen.js": "./js/fullscreen.js?v=202611201742",
+    "./js/fx.js": "./js/fx.js?v=202611201742",
+    "./js/icons.js": "./js/icons.js?v=202611201742",
+    "./js/main.js": "./js/main.js?v=202611201742",
+    "./js/names.js": "./js/names.js?v=202611201742",
+    "./js/net.js": "./js/net.js?v=202611201742",
+    "./js/rules.js": "./js/rules.js?v=202611201742",
+    "./js/sound.js": "./js/sound.js?v=202611201742",
+    "./js/theme.js": "./js/theme.js?v=202611201742"
   }
 }
 </script>
@@ -95,8 +95,14 @@
 <section id="game" class="screen" aria-label="Oyun">
   <div class="game">
     <div class="rail rail-left">
-      <div class="pcard" id="cardTop"><i class="pc-ring" aria-hidden="true"></i><div class="pc-in"></div></div>
-      <div class="pcard" id="cardBottom"><i class="pc-ring" aria-hidden="true"></i><div class="pc-in"></div></div>
+      <div class="pslot" id="slotTop">
+        <div class="pcard" id="cardTop"><i class="pc-ring" aria-hidden="true"></i><div class="pc-in"></div></div>
+        <div class="msgs" id="msgsTop" aria-live="polite" hidden></div>
+      </div>
+      <div class="pslot" id="slotBottom">
+        <div class="pcard" id="cardBottom"><i class="pc-ring" aria-hidden="true"></i><div class="pc-in"></div></div>
+        <div class="msgs" id="msgsBottom" aria-live="polite" hidden></div>
+      </div>
     </div>
     <div class="stage" id="stage">
       <div class="board-wrap" id="boardWrap">
@@ -183,6 +189,6 @@
 
 <div id="globalToast" class="global-toast" role="status" hidden></div>
 
-<script type="module" src="js/main.js?v=202611201740"></script>
+<script type="module" src="js/main.js?v=202611201742"></script>
 </body>
 </html>
