@@ -316,6 +316,20 @@ export class Sound {
     this.tone(this.t, { f: 420, f2: 980, type: 'sine', gain: 0.2, decay: 0.09, dur: 0.07 });
   }
 
+  // Gelen mesaj: MSN Messenger'ı andıran, iki notalı parlak çan
+  msn() {
+    if (!this.ok) return;
+    const t = this.t;
+    const bell = (tt, f, g) => {
+      for (const [m, a, d] of [[1, 1, 0.9], [2.0, 0.35, 0.45], [3.01, 0.18, 0.25], [4.2, 0.08, 0.15]]) {
+        this.tone(tt, { f: f * m, type: 'sine', gain: g * a, a: 0.004, decay: d });
+      }
+    };
+    bell(t, 1318.5, 0.16);        // mi
+    bell(t + 0.12, 1975.5, 0.15); // si
+    bell(t + 0.12, 987.8, 0.06);
+  }
+
   error() {
     if (!this.ok) return;
     const t = this.t;

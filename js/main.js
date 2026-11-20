@@ -131,6 +131,15 @@ class App {
     $('#lafChips').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) this.sendChat('phrase', PHRASES[+b.dataset.i]); });
     $('#lafReacts').innerHTML = REACTIONS.map((r) => `<button type="button" data-k="${r.key}" aria-label="${r.label}">${icon[r.key](24)}</button>`).join('');
     $('#lafReacts').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) this.sendChat('react', b.dataset.k); });
+    $('#lafForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const t = $('#lafText').value.replace(/\s+/g, ' ').trim().slice(0, 100);
+      if (!t) return;
+      if (this.sendChat('phrase', t) === false) return;
+      $('#lafText').value = '';
+      $('#lafText').blur();
+      $('#lafPanel').hidden = true;
+    });
 
     // menü
     $('#btnMenu').addEventListener('click', () => this.openMenu());
@@ -1068,7 +1077,7 @@ class App {
     $('#lafPanel').hidden = true;
     if (!this.room || this.mode !== 'online' || this.spectator()) return;
     const now = Date.now();
-    if (this._lastChat && now - this._lastChat < 1200) return;
+    if (this._lastChat && now - this._lastChat < 1200) return false;
     this._lastChat = now;
     this.room.sendChat({ kind, text, color: this.myColor || '' });
   }
@@ -1081,8 +1090,9 @@ class App {
     if (!c || document.body.dataset.screen !== 'game') return;
     const anchor = c === this.viewer() ? $('#cardBottom') : $('#cardTop');
     if (m.kind === 'react' && icon[m.text] && REACTIONS.some((r) => r.key === m.text)) FX.floatIcon(anchor, icon[m.text](34));
-    else if (m.kind === 'phrase') FX.bubble(anchor, String(m.text || '').slice(0, 80));
-    this.sound.pop();
+    else if (m.kind === 'phrase') FX.bubble(anchor, String(m.text || '').slice(0, 100));
+    // karşıdan gelen mesajda MSN tarzı bildirim, kendi mesajında kısa tık
+    if (m.from !== this.me.id) this.sound.msn(); else this.sound.pop();
   }
 
   onPresence(p) {

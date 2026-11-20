@@ -14,20 +14,14 @@ export function diceName(a, b) {
 export const upperTR = (s) => s.toLocaleUpperCase('tr-TR');
 
 export const PHRASES = [
-  'Zar sende mi kaldı?',
-  'Çaylar benden',
-  'Mars kokusu alıyorum',
   'Hadi oyna artık',
-  'Kapıları kapattım',
   'Şansa bak sen!',
   'Güzel oynadın',
-  'Bu el benim',
+  'Çaylar benden',
 ];
 
 export const REACTIONS = [
-  { key: 'cay', label: 'Çay' },
-  { key: 'alev', label: 'Alev' },
   { key: 'kahkaha', label: 'Kahkaha' },
+  { key: 'alev', label: 'Alev' },
   { key: 'saskin', label: 'Şaşkın' },
-  { key: 'pes', label: 'Pes' },
 ];
