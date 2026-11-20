@@ -240,7 +240,7 @@ input::placeholder { color: rgba(210, 191, 163, 0.7); }
 .pc-name { font-weight: 800; font-size: 15.5px; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; transition: color 0.3s; }
 
 /* yatay telefon: kenar sütunları sık tut, tahtaya yer kalsın */
-@media (orientation: landscape) and (max-height: 520px) and (min-width: 0.1px) {
+@media (orientation: landscape) and (max-height: 520px) {
   .game { grid-template-columns: minmax(84px, 102px) minmax(0, 1fr) minmax(84px, 102px); gap: 6px; }
   .rail { gap: 8px; }
   .pcard { padding: 9px 9px; border-radius: 13px; }
@@ -252,33 +252,43 @@ input::placeholder { color: rgba(210, 191, 163, 0.7); }
   .rail-right .btn .lbl { white-space: normal; text-align: center; line-height: 1.15; }
   .btn-row { gap: 6px; }
 }
+/* telefon dikken zorla yatay: aynı sık yerleşim */
+html.force-land .game { grid-template-columns: minmax(84px, 102px) minmax(0, 1fr) minmax(84px, 102px); gap: 6px; }
+html.force-land .rail { gap: 8px; }
+html.force-land .pcard { padding: 9px 9px; border-radius: 13px; }
+html.force-land .pc-top { gap: 6px; }
+html.force-land .pc-top svg { width: 24px; height: 24px; }
+html.force-land .pc-name { font-size: 14px; }
+html.force-land .rail-right .btn { min-height: 44px; padding: 0 8px; font-size: 13.5px; gap: 6px; }
+html.force-land .rail-right .btn.primary { font-size: 14.5px; }
+html.force-land .rail-right .btn .lbl { white-space: normal; text-align: center; line-height: 1.15; }
+html.force-land .btn-row { gap: 6px; }
 
 /* dikey telefon */
-@media (orientation: portrait) and (min-width: 0.1px) {
-  .game { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; gap: 6px; padding: max(6px, env(safe-area-inset-top)) 0 max(8px, env(safe-area-inset-bottom)); }
-  .rail-left, .rail-right { padding: 0 max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left)); }
-  /* üstte iki ince ad kartı yan yana: tahtaya yer kalır */
-  .rail-left { flex-direction: row; align-items: stretch; gap: 8px; }
-  .rail-left .pslot { flex: 1; min-width: 0; }
-  .rail-left .pcard { padding: 6px 10px; border-radius: 13px; }
-  .rail-left .pc-top svg { width: 22px; height: 22px; }
-  .rail-left #slotTop { order: 1; } .rail-left #slotBottom { order: 2; }
-  .rail-right { flex-direction: row; align-items: center; flex-wrap: nowrap; }
-  .rail-right .spacer { display: none; }
-  .rail-right .btn { width: auto; }
-  .rail-right #btnMain { flex: 1; min-height: 50px; }
-  .rail-right #btnLaf .lbl, .rail-right #btnUndo .lbl { display: none; }
-  .rail-right #btnLaf, .rail-right #btnUndo { width: 46px; padding: 0; }
-  .btn-row { gap: 8px; }
-  /* dikeyde tahta yan döner, ekranın boyunu kullanır (pullar ~%50 büyür) */
-  .board-wrap { position: absolute; left: 50%; top: 50%; width: min(100cqh, 100cqw * 520 / 362); transform: translate(-50%, -50%) rotate(90deg); }
-  .board-wrap .fx-name { transform: translate(-50%, -50%) rotate(-90deg); animation: fadeIn 0.25s ease-out both; }
-  .board-wrap .die-label { transform: translateX(-50%) rotate(-90deg); }
+@media (orientation: portrait) {
+  html:not(.force-land) .game { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; gap: 6px; padding: max(6px, env(safe-area-inset-top)) 0 max(8px, env(safe-area-inset-bottom)); }
+  html:not(.force-land) .rail-left, html:not(.force-land) .rail-right { padding: 0 max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left)); }
+  html:not(.force-land) .rail-left { flex-direction: row; align-items: stretch; gap: 8px; }
+  html:not(.force-land) .rail-left .pslot { flex: 1; min-width: 0; }
+  html:not(.force-land) .rail-left .pcard { padding: 6px 10px; border-radius: 13px; }
+  html:not(.force-land) .rail-left .pc-top svg { width: 22px; height: 22px; }
+  html:not(.force-land) .rail-left #slotTop { order: 1; }
+  html:not(.force-land) .rail-left #slotBottom { order: 2; }
+  html:not(.force-land) .rail-right { flex-direction: row; align-items: center; flex-wrap: nowrap; }
+  html:not(.force-land) .rail-right .spacer { display: none; }
+  html:not(.force-land) .rail-right .btn { width: auto; }
+  html:not(.force-land) .rail-right #btnMain { flex: 1; min-height: 50px; }
+  html:not(.force-land) .rail-right #btnLaf .lbl, html:not(.force-land) .rail-right #btnUndo .lbl { display: none; }
+  html:not(.force-land) .rail-right #btnLaf, html:not(.force-land) .rail-right #btnUndo { width: 46px; padding: 0; }
+  html:not(.force-land) .btn-row { gap: 8px; }
+  html:not(.force-land) .board-wrap { position: absolute; left: 50%; top: 50%; width: min(100cqh, 100cqw * 520 / 362); transform: translate(-50%, -50%) rotate(90deg); }
+  html:not(.force-land) .board-wrap .fx-name { transform: translate(-50%, -50%) rotate(-90deg); animation: fadeIn 0.25s ease-out both; }
+  html:not(.force-land) .board-wrap .die-label { transform: translateX(-50%) rotate(-90deg); }
 }
 
-@media (orientation: portrait) and (min-width: 0.1px) and (max-height: 720px) {
-  .rail-right #btnMain { min-height: 46px; }
-  .game { gap: 5px; }
+@media (orientation: portrait) and (max-height: 720px) {
+  html:not(.force-land) .rail-right #btnMain { min-height: 46px; }
+  html:not(.force-land) .game { gap: 5px; }
 }
 
 /* ---------------------------------------------------------------- tahta katmanları */
@@ -372,10 +382,10 @@ input::placeholder { color: rgba(210, 191, 163, 0.7); }
 #cardBottom .bubble { top: auto; bottom: calc(100% + 9px); }
 #cardBottom .bubble::before { top: auto; bottom: -6px; }
 .bubble.out { opacity: 0; }
-@media (orientation: portrait) and (min-width: 0.1px) {
-  .bubble { left: -2px; right: auto; min-width: 140px; }
-  #cardBottom .bubble { top: calc(100% + 9px); bottom: auto; right: -2px; left: auto; }
-  #cardBottom .bubble::before { top: -6px; bottom: auto; left: auto; right: 22px; }
+@media (orientation: portrait) {
+  html:not(.force-land) .bubble { left: -2px; right: auto; min-width: 140px; }
+  html:not(.force-land) #cardBottom .bubble { top: calc(100% + 9px); bottom: auto; right: -2px; left: auto; }
+  html:not(.force-land) #cardBottom .bubble::before { top: -6px; bottom: auto; left: auto; right: 22px; }
 }
 .float-icon { position: absolute; bottom: 40%; z-index: 10; color: #ffd98a; pointer-events: none; animation: floatUp 1.9s ease-out forwards; }
 .float-icon svg { width: 34px; height: 34px; filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5)); }
@@ -396,8 +406,8 @@ input::placeholder { color: rgba(210, 191, 163, 0.7); }
 .sep { height: 1px; background: rgba(255, 230, 200, 0.14); margin: 2px 0; }
 .reacts { display: flex; justify-content: space-between; }
 .reacts button { width: 44px; height: 44px; padding: 0; border-radius: 12px; border: 1px solid var(--line); background: rgba(255, 236, 210, 0.07); color: #ffd98a; display: flex; align-items: center; justify-content: center; }
-@media (orientation: portrait) and (min-width: 0.1px) {
-  .panel { left: var(--pl); right: var(--pr); top: auto; bottom: calc(var(--pb) + 66px); width: auto; }
+@media (orientation: portrait) {
+  html:not(.force-land) .panel { left: var(--pl); right: var(--pr); top: auto; bottom: calc(var(--pb) + 66px); width: auto; }
 }
 
 .sheet { position: absolute; inset: 0; z-index: 14; background: rgba(8, 5, 3, 0.6); display: grid; place-items: center; padding: var(--pt) var(--pr) var(--pb) var(--pl); }
@@ -471,11 +481,11 @@ input::placeholder { color: rgba(210, 191, 163, 0.7); }
 .msg .ic-r { display: inline-flex; vertical-align: -4px; color: #ffd98a; }
 .msg.new { animation: msgIn 0.5s cubic-bezier(.2, 1.4, .4, 1); }
 @keyframes msgIn { 0% { transform: translateY(10px) scale(0.9); opacity: 0; text-shadow: 0 0 0 rgba(255, 210, 120, 0); } 50% { text-shadow: 0 0 14px rgba(255, 210, 120, 0.9); } 100% { transform: none; opacity: 1; } }
-@media (orientation: portrait) and (min-width: 0.1px) {
-  #slotBottom { flex-direction: column; }
-  .msgs { height: 46px; -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px); mask-image: linear-gradient(to bottom, transparent 0, #000 14px); }
-  .msg { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .msg:not(:nth-last-child(-n+2)) { display: none; }
+@media (orientation: portrait) {
+  html:not(.force-land) #slotBottom { flex-direction: column; }
+  html:not(.force-land) .msgs { height: 46px; -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px); mask-image: linear-gradient(to bottom, transparent 0, #000 14px); }
+  html:not(.force-land) .msg { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  html:not(.force-land) .msg:not(:nth-last-child(-n+2)) { display: none; }
 }
 
 /* iPhone tarayıcısı: adres çubuğunun küçülmesi için sayfa biraz kaydırılabilir */

@@ -593,19 +593,9 @@ class App {
   orient() {
     const H = document.documentElement;
     const on = !!(this.settings && this.settings.land) && FS.touch() && document.body.dataset.screen === 'game' && window.innerHeight > window.innerWidth;
-    if (on === H.classList.contains('force-land') && this._mq) return;
+    if (on === H.classList.contains('force-land') && this._oriented) return;
+    this._oriented = true;
     H.classList.toggle('force-land', on);
-    if (!this._mq) {
-      this._mq = [];
-      for (const sh of document.styleSheets) {
-        let rules; try { rules = sh.cssRules; } catch (e) { continue; }
-        for (const r of rules) if (r.media && r.media.mediaText.includes('0.1px')) this._mq.push([r, r.media.mediaText]);
-      }
-    }
-    for (const [r, txt] of this._mq) {
-      const want = !on ? txt : txt.includes('portrait') ? 'not all' : 'all';
-      if (r.media.mediaText !== want) r.media.mediaText = want;
-    }
     if (on) window.scrollTo(0, 0);
     this.barHide();
     if (this.board && this.G && on !== this._lastLand) { this._lastLand = on; requestAnimationFrame(() => this.snap()); }
