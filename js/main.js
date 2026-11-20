@@ -53,7 +53,7 @@ function themeSwatch(k) {
 class App {
   constructor() {
     const s = store.get('ayar', {});
-    this.settings = { name: s.name || '', to: 5, theme: 'ceviz', sound: s.sound !== false, land: s.land !== false };
+    this.settings = { name: s.name || '', to: 5, theme: 'ceviz', sound: s.sound !== false };
     this.sound = new Sound();
     this.sound.enabled = this.settings.sound;
     this.sound.voice = false;
@@ -147,8 +147,6 @@ class App {
     $('#menu').addEventListener('click', (e) => { if (e.target.id === 'menu') $('#menu').hidden = true; });
     $('#mSound').addEventListener('click', () => this.toggleSound());
     $('#mFull').addEventListener('click', () => this.toggleFullscreen());
-    $('#mLand').addEventListener('click', () => { this.settings.land = !this.settings.land; this.save(); this.orient(); this.paintMenu(); });
-    for (const ev of ['resize', 'orientationchange']) window.addEventListener(ev, () => this.orient());
     $('#mResign').addEventListener('click', () => this.resign());
     $('#mExit').addEventListener('click', async () => {
       $('#menu').hidden = true;
@@ -234,7 +232,6 @@ class App {
     document.body.dataset.screen = name;
     if (name !== 'game') { $('#lafPanel').hidden = true; $('#menu').hidden = true; }
     if (name === 'lobby') this.startLobby(); else this.stopLobby();
-    this.orient();
     if (FS.scrollHide()) {
       if (name !== 'game' || !document.documentElement.classList.contains('bar-hide')) window.scrollTo(0, 0);
       this.barHide();
@@ -588,21 +585,8 @@ class App {
   // iPhone tarayıcısı: Fullscreen API yok. Sayfayı biraz kaydırılabilir yapıyoruz; kullanıcı ekranı
   // yukarı kaydırınca Chrome/Safari adres ve alt çubukları küçültür, oyun boşalan alana yayılır.
   // Kod ile kaydırmak çubukları küçültmez, kaydırmayı kullanıcının parmağı yapmalı.
-  // Telefon dik tutulurken oyun ekranı 90° döndürülüp yatay düzende gösterilir.
-  // Telefon gerçekten yan çevrilince tarayıcı yataya geçer ve döndürme kendiliğinden kalkar.
-  orient() {
-    const H = document.documentElement;
-    const on = !!(this.settings && this.settings.land) && FS.touch() && document.body.dataset.screen === 'game' && window.innerHeight > window.innerWidth;
-    if (on === H.classList.contains('force-land') && this._oriented) return;
-    this._oriented = true;
-    H.classList.toggle('force-land', on);
-    if (on) window.scrollTo(0, 0);
-    this.barHide();
-    if (this.board && this.G && on !== this._lastLand) { this._lastLand = on; requestAnimationFrame(() => this.snap()); }
-  }
-
   barHide() {
-    const on = FS.scrollHide() && document.body.dataset.screen === 'game' && !document.documentElement.classList.contains('force-land');
+    const on = FS.scrollHide() && document.body.dataset.screen === 'game';
     const was = document.documentElement.classList.contains('bar-hide');
     document.documentElement.classList.toggle('bar-hide', on);
     if (!on || was) return;
@@ -1217,8 +1201,6 @@ class App {
     $('#mSoundVal').textContent = this.settings.sound ? 'Açık' : 'Kapalı';
     $('#mFull').hidden = FS.standalone() || (!FS.supported() && !FS.IOS);
     $('#mFullVal').textContent = FS.supported() ? (FS.active() ? 'Açık' : 'Kapalı') : 'Nasıl?';
-    $('#mLand').hidden = !FS.touch();
-    $('#mLandVal').textContent = this.settings.land ? 'Açık' : 'Kapalı';
   }
 
   toggleSound() {
