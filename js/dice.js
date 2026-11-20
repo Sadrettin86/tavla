@@ -129,7 +129,10 @@ export class DiceView {
       w.classList.remove('lucky'); void w.offsetWidth; w.classList.add('lucky');
       setTimeout(() => w.classList.remove('lucky'), 2100);
       if (matchMedia('(prefers-reduced-motion: reduce)').matches) continue;
-      const b = w.getBoundingClientRect(), cx = b.left + b.width / 2, cy = b.top + b.height / 2;
+      const b = w.getBoundingClientRect();
+      let cx = b.left + b.width / 2, cy = b.top + b.height / 2;
+      // sayfa 90° döndürülmüşse sabit konumlu kıvılcımlar döndürülmüş gövdeye göre yerleşir
+      if (document.documentElement.classList.contains('force-land')) [cx, cy] = [cy, window.innerWidth - cx];
       for (let i = 0; i < 14; i++) {
         const d = document.createElement('div');
         d.className = 'fx-spark';
