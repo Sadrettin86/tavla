@@ -254,6 +254,7 @@ export class Sound {
     src.connect(fl).connect(g).connect(this.master); src.start(t + 0.03, 0.2, 0.45);
     // gövdeden gelen tok darbe ve çatlama
     this.boom(t, 1);
+    this.collapse(t + 0.05);
     const cr = c.createBufferSource(); cr.buffer = this.noise;
     const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1800;
     const cg = c.createGain(); cg.gain.setValueAtTime(0.5, t); cg.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
@@ -263,6 +264,66 @@ export class Sound {
     this.impact(t + 0.79, 'chkChk', 0.3);
     this.boom(t + 0.76, 0.5);
     this.impact(t + 0.95, 'chkWood', 0.25);
+  }
+
+  // Bina yıkılması: çatırdama, derin gümbürtü, ufalanma ve uzun süre düşen moloz
+  collapse(t) {
+    const c = this.ctx, R = Math.random;
+    const bus = c.createGain(); bus.gain.value = 0.55;
+    const comp = c.createDynamicsCompressor();
+    comp.threshold.value = -14; comp.ratio.value = 6; comp.attack.value = 0.003; comp.release.value = 0.25;
+    bus.connect(comp); comp.connect(this.master); comp.connect(this.verb);
+    const noise = (start, dur, filt, env) => {
+      const src = c.createBufferSource(); src.buffer = this.noise; src.loop = true;
+      const fl = c.createBiquadFilter(); fl.type = filt.type; fl.Q.value = filt.q || 0.7;
+      fl.frequency.setValueAtTime(filt.f0, start);
+      if (filt.f1) fl.frequency.exponentialRampToValueAtTime(filt.f1, start + dur);
+      const g = c.createGain(); g.gain.setValueAtTime(0.0001, start);
+      for (const [dt, v] of env) g.gain.exponentialRampToValueAtTime(Math.max(0.0001, v), start + dt);
+      src.connect(fl).connect(g).connect(bus);
+      src.start(start, R() * 1.1); src.stop(start + dur + 0.05);
+      return g;
+    };
+    // 1) ilk çatırdamalar: kiriş kırılıyor
+    for (const dt of [0, 0.05, 0.13, 0.21, 0.34]) {
+      const s0 = t + dt + R() * 0.02;
+      noise(s0, 0.09, { type: 'highpass', f0: 1400 + R() * 1500 }, [[0.002, 0.3 + R() * 0.2], [0.08, 0.0001]]);
+      noise(s0, 0.12, { type: 'bandpass', f0: 300 + R() * 300, q: 1.5 }, [[0.003, 0.25], [0.11, 0.0001]]);
+    }
+    // 2) derin gümbürtü: yavaş açılıp uzun söner
+    noise(t + 0.15, 3.2, { type: 'lowpass', f0: 220, f1: 70, q: 0.9 }, [[0.25, 1.1], [0.9, 0.85], [2.0, 0.35], [3.2, 0.0001]]);
+    const sub = c.createOscillator(); sub.type = 'sine';
+    sub.frequency.setValueAtTime(58, t + 0.15); sub.frequency.exponentialRampToValueAtTime(26, t + 2.2);
+    const sg = c.createGain(); sg.gain.setValueAtTime(0.0001, t + 0.15); sg.gain.exponentialRampToValueAtTime(0.7, t + 0.35); sg.gain.exponentialRampToValueAtTime(0.0001, t + 2.4);
+    sub.connect(sg).connect(bus); sub.start(t + 0.15); sub.stop(t + 2.5);
+    // 3) ufalanma: orta frekansta dalgalı hışırtı (beton ve sıva dökülüyor)
+    const cr = noise(t + 0.3, 2.6, { type: 'bandpass', f0: 900, f1: 500, q: 0.8 }, [[0.3, 0.5], [1.4, 0.3], [2.6, 0.0001]]);
+    for (let k = 0; k < 26; k++) {
+      const tk = t + 0.35 + k * 0.08 + R() * 0.04;
+      cr.gain.setValueAtTime(0.12 + R() * 0.45 * (1 - k / 26), tk);
+    }
+    // 4) moloz: önce sık ve iri, sonra seyrek ve ufak parçalar
+    for (let i = 0; i < 46; i++) {
+      const u = Math.pow(R(), 1.7);
+      const tk = t + 0.25 + u * 2.9;
+      const big = 1 - u;
+      this.burstTo(bus, tk, { f: 350 + R() * 2600 * (0.4 + u), q: 1.5 + R() * 4, gain: (0.15 + R() * 0.35) * (0.35 + big), decay: 0.02 + R() * 0.07 * big + 0.01 });
+      if (big > 0.6 && R() < 0.5) this.burstTo(bus, tk, { f: 120 + R() * 120, q: 1, gain: 0.5 * big, decay: 0.12, type: 'lowpass' });
+    }
+    // 5) en sonda ince taş tozu ve birkaç küçük çakıl
+    for (let i = 0; i < 8; i++) this.burstTo(bus, t + 2.6 + R() * 0.9, { f: 3000 + R() * 3000, q: 3, gain: 0.08 + R() * 0.08, decay: 0.02 });
+  }
+
+  burstTo(out, t, { f = 2000, q = 3, gain = 0.5, decay = 0.05, type = 'bandpass' } = {}) {
+    const c = this.ctx;
+    const src = c.createBufferSource(); src.buffer = this.noise;
+    const fl = c.createBiquadFilter(); fl.type = type; fl.frequency.value = f; fl.Q.value = q;
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain, t + 0.002);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
+    src.connect(fl).connect(g).connect(out);
+    src.start(t, Math.random() * 0.8, decay + 0.05);
   }
 
   boom(t, k) {
