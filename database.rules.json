@@ -16,6 +16,15 @@
             ".validate": "newData.hasChildren(['name']) && newData.child('name').isString() && newData.child('name').val().length <= 24"
           }
         },
+        "sig": {
+          "$to": {
+            ".read": "$room.matches(/^[A-HJ-NP-Z2-9]{6}$/) && $to.matches(/^[a-f0-9]{16}$/)",
+            "$msg": {
+              ".write": "$room.matches(/^[A-HJ-NP-Z2-9]{6}$/) && $to.matches(/^[a-f0-9]{16}$/)",
+              ".validate": "newData.hasChildren(['from', 'type']) && newData.child('from').isString() && newData.child('from').val().matches(/^[a-f0-9]{16}$/) && newData.child('type').val().matches(/^(offer|answer|ice|bye)$/) && (!newData.child('sdp').exists() || (newData.child('sdp').isString() && newData.child('sdp').val().length < 16000)) && (!newData.child('cand').exists() || (newData.child('cand').isString() && newData.child('cand').val().length < 2000))"
+            }
+          }
+        },
         "chat": {
           ".read": "$room.matches(/^[A-HJ-NP-Z2-9]{6}$/)",
           "$msg": {

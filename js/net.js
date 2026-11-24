@@ -78,6 +78,7 @@ export class OfflineRoom {
   publish() {}
   unpublish() {}
   lobbyOnline() {}
+  sendSig() {}
   close() {}
 }
 
@@ -108,12 +109,20 @@ class FirebaseRoom {
       if (on) D.onDisconnect(this.myRef).remove().then(() => this.writePresence()).catch(() => {});
       if (on && this.lobbyOn) this.lobbyOnline(true);
     }));
+    // sesli sohbet sinyalleri: bana gelenler okunur ve silinir
+    this.sigRef = D.ref(this.db, `${base}/sig/${this.me.id}`);
+    D.remove(this.sigRef).catch(() => {});
+    this.unsubs.push(D.onChildAdded(this.sigRef, (s) => {
+      const v = s.val();
+      D.remove(s.ref).catch(() => {});
+      if (v && this.h.onSig) this.h.onSig(v);
+    }, () => {}));
     const startKey = D.push(this.chatRef).key; // yazılmaz; sadece "bundan sonrası" için işaret
     this.unsubs.push(D.onChildAdded(D.query(this.chatRef, D.orderByKey(), D.startAfter(startKey)), (s) => this.h.onChat(s.val()), () => {}));
   }
 
   writePresence() {
-    return this.D.set(this.myRef, { name: this.me.name || 'Oyuncu', color: this.me.color || '', at: this.D.serverTimestamp() });
+    return this.D.set(this.myRef, { name: this.me.name || 'Oyuncu', color: this.me.color || '', v: !!this.me.v, m: !!this.me.m, at: this.D.serverTimestamp() });
   }
 
   setPresence(p) { Object.assign(this.me, p); return this.writePresence().catch(() => {}); }
@@ -127,6 +136,11 @@ class FirebaseRoom {
       return JSON.stringify(N);
     });
     return res.committed;
+  }
+
+  // sesli sohbet: karşı tarafa bağlantı teklifi, yanıtı ve ağ adayları
+  sendSig(to, msg) {
+    return this.D.push(this.D.ref(this.db, `rooms/${this.id}/sig/${to}`), { ...msg, from: this.me.id }).catch(() => {});
   }
 
   sendChat(msg) {
@@ -185,13 +199,14 @@ class LocalRoom {
   }
   beat() {
     if (this.lobbyOn) writeLocalLobby((L) => { if (L[this.id]) L[this.id].on = { ...(L[this.id].on || {}), [this.me.id]: Date.now() }; });
-    this.peers[this.me.id] = { name: this.me.name, color: this.me.color || '', last: Date.now() };
-    this.post({ t: 'hb', id: this.me.id, name: this.me.name, color: this.me.color || '' });
+    this.peers[this.me.id] = { name: this.me.name, color: this.me.color || '', v: !!this.me.v, m: !!this.me.m, last: Date.now() };
+    this.post({ t: 'hb', id: this.me.id, name: this.me.name, color: this.me.color || '', v: !!this.me.v, m: !!this.me.m });
     this.emitPresence();
   }
   onMsg(m) {
     if (m.t === 'state') { if (m.G) this.last = m.G; this.h.onState(m.G || this.read()); }
-    else if (m.t === 'hb') { this.peers[m.id] = { name: m.name, color: m.color, last: Date.now() }; this.emitPresence(); }
+    else if (m.t === 'hb') { this.peers[m.id] = { name: m.name, color: m.color, v: m.v, m: m.m, last: Date.now() }; this.emitPresence(); }
+    else if (m.t === 'sig') { if (m.to === this.me.id && this.h.onSig) this.h.onSig(m.msg); }
     else if (m.t === 'chat') this.h.onChat(m.msg);
     else if (m.t === 'bye') { delete this.peers[m.id]; this.emitPresence(); }
   }
@@ -202,7 +217,7 @@ class LocalRoom {
   }
   emitPresence() {
     const o = {};
-    for (const [k, v] of Object.entries(this.peers)) o[k] = { name: v.name, color: v.color };
+    for (const [k, v] of Object.entries(this.peers)) o[k] = { name: v.name, color: v.color, v: !!v.v, m: !!v.m };
     this.h.onPresence(o);
   }
   setPresence(p) { Object.assign(this.me, p); this.beat(); }
@@ -217,6 +232,7 @@ class LocalRoom {
       L[this.id].on = o;
     });
   }
+  sendSig(to, msg) { this.post({ t: 'sig', to, msg: { ...msg, from: this.me.id } }); }
   sendChat(msg) {
     const m = { ...msg, from: this.me.id, ts: Date.now() };
     this.post({ t: 'chat', msg: m });

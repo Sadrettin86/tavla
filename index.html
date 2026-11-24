@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Tavla">
 <meta name="description" content="Online tavla. Oyun kur ya da açık bir oyuna katıl.">
-<meta name="tavla-version" content="202611211822">
+<meta name="tavla-version" content="202611241221">
 <title>Tavla</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -17,22 +17,24 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Ultra&display=swap">
-<link rel="stylesheet" href="css/style.css?v=202611211822">
+<link rel="stylesheet" href="css/style.css?v=202611241221">
 <script type="importmap">
 {
   "imports": {
-    "./js/board.js": "./js/board.js?v=202611211822",
-    "./js/dice.js": "./js/dice.js?v=202611211822",
-    "./js/firebase-config.js": "./js/firebase-config.js?v=202611211822",
-    "./js/fullscreen.js": "./js/fullscreen.js?v=202611211822",
-    "./js/fx.js": "./js/fx.js?v=202611211822",
-    "./js/icons.js": "./js/icons.js?v=202611211822",
-    "./js/main.js": "./js/main.js?v=202611211822",
-    "./js/names.js": "./js/names.js?v=202611211822",
-    "./js/net.js": "./js/net.js?v=202611211822",
-    "./js/rules.js": "./js/rules.js?v=202611211822",
-    "./js/sound.js": "./js/sound.js?v=202611211822",
-    "./js/theme.js": "./js/theme.js?v=202611211822"
+    "./js/board.js": "./js/board.js?v=202611241221",
+    "./js/dice.js": "./js/dice.js?v=202611241221",
+    "./js/firebase-config.js": "./js/firebase-config.js?v=202611241221",
+    "./js/fullscreen.js": "./js/fullscreen.js?v=202611241221",
+    "./js/fx.js": "./js/fx.js?v=202611241221",
+    "./js/icons.js": "./js/icons.js?v=202611241221",
+    "./js/main.js": "./js/main.js?v=202611241221",
+    "./js/names.js": "./js/names.js?v=202611241221",
+    "./js/net.js": "./js/net.js?v=202611241221",
+    "./js/rules.js": "./js/rules.js?v=202611241221",
+    "./js/sound.js": "./js/sound.js?v=202611241221",
+    "./js/theme.js": "./js/theme.js?v=202611241221",
+    "./js/voice-config.js": "./js/voice-config.js?v=202611241221",
+    "./js/voice.js": "./js/voice.js?v=202611241221"
   }
 }
 </script>
@@ -105,6 +107,8 @@
       </div>
     </div>
     <div class="stage" id="stage">
+        <div class="msgs watch" id="msgsWatch" aria-live="polite" hidden></div>
+        <div class="voice-who" id="voiceWho" hidden></div>
       <div class="board-wrap" id="boardWrap">
         <div class="dice-layer" id="diceLayer"></div>
       </div>
@@ -115,6 +119,7 @@
         <button type="button" class="icon-btn" id="btnSound" aria-label="Ses"><span class="ic" data-icon="sound"></span></button>
       </div>
       <button type="button" class="btn" id="btnLaf" aria-label="Laf at"><span class="ic" data-icon="chat"></span><span class="lbl">Laf at</span></button>
+      <button type="button" class="btn mic" id="btnMic" aria-label="Sesli sohbete katıl" hidden><span class="ic" data-icon="micOff"></span><span class="lbl">Ses</span><b class="mic-n" hidden></b></button>
       <div class="spacer"></div>
       <button type="button" class="btn" id="btnUndo" aria-label="Geri al"><span class="ic" data-icon="undo"></span><span class="lbl">Geri al</span></button>
       <button type="button" class="btn primary" id="btnMain">Zar at</button>
@@ -142,6 +147,7 @@
       <p class="menu-tip" id="mFullTip" hidden></p>
       <button type="button" class="menu-row" id="mResign"><span class="ic" data-icon="flag"></span><span>Bu eli bırak</span></button>
       <button type="button" class="menu-row" id="mDelete"><span class="ic" data-icon="trash"></span><span>Oyunu sil</span></button>
+      <button type="button" class="menu-row" id="mVoiceOff" hidden><span class="ic" data-icon="micOff"></span><span>Sesli sohbetten çık</span></button>
       <button type="button" class="menu-row" id="mExit"><span class="ic" data-icon="exit"></span><span>Ana sayfaya dön</span></button>
     </div>
   </div>
@@ -190,6 +196,6 @@
 
 <div id="globalToast" class="global-toast" role="status" hidden></div>
 
-<script type="module" src="js/main.js?v=202611211822"></script>
+<script type="module" src="js/main.js?v=202611241221"></script>
 </body>
 </html>

@@ -6,6 +6,7 @@ import * as FX from './fx.js';
 import * as FS from './fullscreen.js';
 import { icon, logoDice } from './icons.js';
 import { diceName, upperTR, PHRASES, REACTIONS } from './names.js';
+import { Voice, voiceSupported } from './voice.js';
 import { connectRoom, OfflineRoom, newRoomId, validRoomId, onlineAvailable, testMode, watchLobby, onlineCount, removeLobbyEntry } from './net.js';
 import { THEMES, tableBG, checkerIcon, renderBoard } from './theme.js';
 
@@ -152,6 +153,10 @@ class App {
     $('#mFull').addEventListener('click', () => this.toggleFullscreen());
     $('#mResign').addEventListener('click', () => this.resign());
     $('#mDelete').addEventListener('click', () => this.closeOwnGame());
+    $('#btnMic').addEventListener('click', () => this.micTap());
+    $('#mVoiceOff').addEventListener('click', () => this.leaveVoice());
+    // iOS: başka bir sekmeden dönünce ya da ilk dokunuşta karşı tarafın sesini yeniden başlat
+    document.addEventListener('pointerdown', () => { if (this.voice && this.voice.on) this.voice.resume(); }, { passive: true });
     $('#mExit').addEventListener('click', async () => {
       $('#menu').hidden = true;
       if (this.G && (this.G.phase === 'move' || this.G.phase === 'roll') && !(await this.confirm('Oyundan çıkmak istiyor musun?'))) return;
@@ -371,6 +376,7 @@ class App {
       onState: (G) => this.onState(G),
       onPresence: (p) => this.onPresence(p),
       onChat: (m) => this.onChat(m),
+      onSig: (m) => { if (this.voice) this.voice.onSig(m); },
       onConn: (on) => this.onConn(on),
       onError: () => this.globalToast('Odaya erişilemedi. Firebase kurallarını kontrol et.', 4000),
     };
@@ -489,6 +495,8 @@ class App {
   }
 
   leave() {
+    if (this.voice) { this.voice.leave(); this.voice = null; }
+    this.paintSpeaking(new Set());
     if (this.room) { try { this.room.close(); } catch (e) { /* yok say */ } }
     this.lobbyKey = null;
     lastRoom.set(null);
@@ -843,8 +851,9 @@ class App {
     main.disabled = !enabled;
     main.classList.toggle('ready', ready);
     $('#btnUndo').disabled = !(my && G.phase === 'move' && G.moves.length > 0);
-    $('#btnLaf').hidden = this.mode !== 'online' || this.spectator();
-    for (const sel of ['#msgsTop', '#msgsBottom']) $(sel).hidden = this.mode !== 'online';
+    $('#btnLaf').hidden = this.mode !== 'online';
+    for (const sel of ['#msgsTop', '#msgsBottom', '#msgsWatch']) $(sel).hidden = this.mode !== 'online';
+    this.paintMic();
     $('#btnSound').innerHTML = (this.settings.sound ? icon.sound : icon.mute)(20);
     $('#btnSound').setAttribute('aria-label', this.settings.sound ? 'Sesi kapat' : 'Sesi aç');
   }
@@ -1163,16 +1172,74 @@ class App {
   // ============================================================ sohbet, bağlantı
   sendChat(kind, text) {
     $('#lafPanel').hidden = true;
-    if (!this.room || this.mode !== 'online' || this.spectator()) return;
+    if (!this.room || this.mode !== 'online') return;
     const now = Date.now();
     if (this._lastChat && now - this._lastChat < 1200) return false;
     this._lastChat = now;
-    this.room.sendChat({ kind, text, color: this.myColor || '' });
+    this.room.sendChat({ kind, text, color: this.myColor || '', name: (this.settings.name || 'İzleyici').slice(0, 24) });
+  }
+
+  // ============================================================ sesli sohbet
+  async micTap() {
+    if (!this.room || this.mode !== 'online' || !voiceSupported()) return;
+    if (!this.voice) this.voice = new Voice({ room: this.room, me: { id: this.me.id }, onChange: () => this.paintMic(), onSpeaking: (s) => this.paintSpeaking(s) });
+    if (this.voice.on) { this.voice.setMuted(!this.voice.muted); this.voice.resume(); return; }
+    try {
+      await this.voice.join();
+      this.voice.sync(this.presence);
+      FX.toast(this.stage, 'Sesli sohbettesin. Susturmak için düğmeye dokun.', 2600);
+    } catch (e) {
+      this.globalToast(e && e.name === 'NotAllowedError' ? 'Mikrofon izni verilmedi' : 'Mikrofon açılamadı', 3000);
+    }
+    this.paintMic();
+  }
+
+  leaveVoice() {
+    $('#menu').hidden = true;
+    if (this.voice) this.voice.leave();
+    this.paintMic();
+  }
+
+  paintMic() {
+    const b = $('#btnMic');
+    if (!b) return;
+    const show = this.mode === 'online' && voiceSupported();
+    b.hidden = !show;
+    if (!show) return;
+    const V = this.voice, on = !!(V && V.on), muted = on && V.muted;
+    b.classList.toggle('live', on && !muted);
+    b.classList.toggle('muted', muted);
+    const ic = on && !muted ? icon.voice : icon.micOff;
+    const key = on ? (muted ? 'm' : 'l') : 'o';
+    if (b._k !== key) { b.querySelector('.ic').innerHTML = ic(18); b.querySelector('.lbl').textContent = !on ? 'Ses' : muted ? 'Sessiz' : 'Açık'; b._k = key; }
+    b.setAttribute('aria-label', !on ? 'Sesli sohbete katıl' : muted ? 'Mikrofonu aç' : 'Mikrofonu kapat');
+    // sesli sohbetteki diğer kişi sayısı
+    const n = Object.entries(this.presence || {}).filter(([id, p]) => id !== this.me.id && p && p.v).length;
+    const badge = b.querySelector('.mic-n');
+    badge.hidden = !n;
+    badge.textContent = n;
+    const off = $('#mVoiceOff');
+    if (off) off.hidden = !on;
+  }
+
+  // Konuşanlar: oyuncunun kartı yeşil parlar, izleyicinin adı tahtanın üstünde görünür
+  paintSpeaking(set) {
+    const G = this.G;
+    const ids = set || new Set();
+    const v = G ? this.viewer() : 'w';
+    const pid = (c) => G && G.players[c] && G.players[c].id;
+    $('#cardBottom').classList.toggle('speaking', !!pid(v) && ids.has(pid(v)));
+    $('#cardTop').classList.toggle('speaking', !!pid(other(v)) && ids.has(pid(other(v))));
+    const seated = new Set([pid('w'), pid('b')].filter(Boolean));
+    const names = [...ids].filter((id) => !seated.has(id)).map((id) => (this.presence[id] && this.presence[id].name) || 'İzleyici');
+    const w = $('#voiceWho');
+    w.hidden = !names.length;
+    if (names.length) w.textContent = names.join(', ') + ' konuşuyor';
   }
 
   // ad kartının altında akan mesajlar: yenisi belirgin, eskiler silikleşip kaybolur
   logMsg(c, m) {
-    const box = c === this.viewer() ? $('#msgsBottom') : $('#msgsTop');
+    const box = c === 'watch' ? $('#msgsWatch') : c === this.viewer() ? $('#msgsBottom') : $('#msgsTop');
     if (!box) return;
     const d = document.createElement('div');
     d.className = 'msg new';
@@ -1180,6 +1247,12 @@ class App {
       if (!icon[m.text] || !REACTIONS.some((r) => r.key === m.text)) return;
       d.innerHTML = `<span class="ic-r">${icon[m.text](18)}</span>`;
     } else d.textContent = String(m.text || '').slice(0, 100);
+    if (c === 'watch') {
+      const nm = (this.presence[m.from] && this.presence[m.from].name) || m.name || 'İzleyici';
+      const b = document.createElement('b');
+      b.textContent = String(nm).slice(0, 24) + ': ';
+      d.prepend(b);
+    }
     box.appendChild(d);
     const list = () => [...box.children].filter((x) => !x.classList.contains('gone'));
     const items = list().reverse(); // en yeniden eskiye
@@ -1202,7 +1275,13 @@ class App {
     if (!G || !m) return;
     const P = G.players;
     const c = P.w && P.w.id === m.from ? 'w' : P.b && P.b.id === m.from ? 'b' : null;
-    if (!c || document.body.dataset.screen !== 'game') return;
+    if (document.body.dataset.screen !== 'game') return;
+    if (!c) {
+      // izleyiciden gelen mesaj: tahtanın üstündeki akışta adıyla
+      this.logMsg('watch', m);
+      if (m.from !== this.me.id) this.sound.msn(); else this.sound.pop();
+      return;
+    }
     const anchor = c === this.viewer() ? $('#cardBottom') : $('#cardTop');
     if (m.kind === 'react' && icon[m.text] && REACTIONS.some((r) => r.key === m.text)) FX.floatIcon(anchor, icon[m.text](34));
     this.logMsg(c, m);
@@ -1212,6 +1291,8 @@ class App {
 
   onPresence(p) {
     this.presence = p || {};
+    if (this.voice) this.voice.sync(this.presence);
+    this.paintMic();
     if (!this.G) return;
     if (document.body.dataset.screen === 'game') this.renderRails();
     // yeni gelen izleyiciler (oyunculara kısa bir not)

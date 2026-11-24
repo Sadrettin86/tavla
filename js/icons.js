@@ -23,6 +23,7 @@ export const icon = {
   eye: (s) => svg('<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle>', s),
   palette: (s) => svg('<circle cx="13.5" cy="6.5" r="1.3" fill="currentColor"></circle><circle cx="17.5" cy="10.5" r="1.3" fill="currentColor"></circle><circle cx="8.5" cy="7.5" r="1.3" fill="currentColor"></circle><circle cx="6.5" cy="12.5" r="1.3" fill="currentColor"></circle><path d="M12 2a10 10 0 1 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1.1.9-2 2-2h2.4A5.6 5.6 0 0 0 22 9.8C22 5.5 17.5 2 12 2z"></path>', s),
   voice: (s) => svg('<path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"></path><path d="M19 11a7 7 0 0 1-14 0"></path><path d="M12 18v3"></path>', s),
+  micOff: (s) => svg('<path d="M9 9v3a3 3 0 0 0 5.1 2.1"></path><path d="M15 9.3V6a3 3 0 0 0-5.7-1.3"></path><path d="M19 11a7 7 0 0 1-1.2 3.9"></path><path d="M5 11a7 7 0 0 0 11 5.7"></path><path d="M12 18v3"></path><path d="M3 3l18 18"></path>', s),
   exit: (s) => svg('<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="M16 17l5-5-5-5"></path><path d="M21 12H9"></path>', s),
   // tepkiler
   cay: (s) => svg('<path d="M7.7 5.8c.3 2.4 1 4.4 2.5 6.7-.8 1.7-1 3.3-1 5h5.6c0-1.7-.2-3.3-1-5 1.5-2.3 2.2-4.3 2.5-6.7z" fill="currentColor" fill-opacity="0.4" stroke="none"></path><path d="M7.5 3.5c-.2 3 .5 6 2.7 9-.8 1.7-1 3.3-1 5h5.6c0-1.7-.2-3.3-1-5 2.2-3 2.9-6 2.7-9z"></path><ellipse cx="12" cy="19.3" rx="7.8" ry="1.7"></ellipse>', s),

@@ -86,3 +86,13 @@ npm test
 - Zarlar `crypto.getRandomValues` ile atılır.
 - Odalar Firebase'de `rooms/` altında birikir, her biri birkaç KB. Arada bir konsoldan silebilirsin.
 - İki yer dolduktan sonra linki açan herkes izleyici olarak girer, adı oyunculardan biriyle aynı olsa bile. Oyuncu aynı telefon ve aynı tarayıcıdan dönerse yeri durur; başka tarayıcıdan ya da ana ekran uygulamasından gelirse o da izleyici olur.
+
+## Sesli sohbet
+
+Oyuncular ve izleyiciler oyun ekranındaki **Ses** düğmesiyle sesli sohbete katılır
+(WebRTC, herkes herkesle doğrudan bağlanır, ses kaydedilmez). Bağlantı mesajları
+Firebase'deki `rooms/{oda}/sig` altından geçer; `database.rules.json` güncellenince
+kuralları Firebase konsolunda yeniden yayınlayın.
+
+Mobil veride bağlantı için Cloudflare TURN kullanılır: kurulum `worker/README.md`,
+Worker adresi `js/voice-config.js` içine yazılır. Boş kalırsa yalnızca STUN çalışır.
