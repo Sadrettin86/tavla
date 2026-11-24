@@ -40,13 +40,25 @@ export class Sound {
   set enabled(on) {
     this._enabled = !!on;
     this.applySession();
-    if (this.silentEl) { if (on && !document.hidden) this.silentEl.play().catch(() => {}); else this.silentEl.pause(); }
+    if (this.silentEl) { if (on && !document.hidden && !this._rec) this.silentEl.play().catch(() => {}); else this.silentEl.pause(); }
   }
 
   // Ses açıksa sessiz anahtarı aş; kapalıysa diğer uygulamaların sesine karışma
+  // Sesli sohbetteyken 'play-and-record' şart: 'playback' türünde iOS mikrofonu açmaz.
   applySession() {
-    try { if (navigator.audioSession) navigator.audioSession.type = this._enabled ? 'playback' : 'ambient'; } catch (e) { /* desteklenmiyor */ }
+    try {
+      if (navigator.audioSession) navigator.audioSession.type = this.recording ? 'play-and-record' : this._enabled ? 'playback' : 'ambient';
+    } catch (e) { /* desteklenmiyor */ }
   }
+
+  set recording(on) {
+    this._rec = !!on;
+    // eski iOS'ta sessiz anahtarı aşmak için çalan sessiz ses mikrofonla çakışır
+    if (this.silentEl) { if (on) this.silentEl.pause(); else if (this._enabled && !document.hidden) this.silentEl.play().catch(() => {}); }
+    this.applySession();
+  }
+
+  get recording() { return !!this._rec; }
 
   // Yalnızca dokunuş/tıklama/tuş olayının içinde çağrılmalı
   unlock() {

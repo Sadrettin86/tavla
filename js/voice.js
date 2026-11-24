@@ -33,8 +33,9 @@ export const voiceSupported = () => !!(navigator.mediaDevices && navigator.media
 
 export class Voice {
   // room: sendSig(to, msg) ve setPresence({ v, m }) olan oda; me: { id }
-  constructor({ room, me, onChange, onSpeaking }) {
+  constructor({ room, me, onChange, onSpeaking, onRecording }) {
     this.room = room;
+    this.onRecording = onRecording || (() => {});
     this.me = me;
     this.onChange = onChange || (() => {});
     this.onSpeaking = onSpeaking || (() => {});
@@ -48,7 +49,19 @@ export class Voice {
 
   async join() {
     if (this.on) return true;
-    this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
+    this.onRecording(true);
+    try {
+      try {
+        this.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
+      } catch (e) {
+        if (e && e.name === 'NotAllowedError') throw e;
+        // bazı cihazlar ayrıntılı istekleri kabul etmez: sade haliyle bir daha dene
+        this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+    } catch (e) {
+      this.onRecording(false);
+      throw e;
+    }
     this.on = true;
     this.muted = false;
     this.ctx = this.ctx || new (window.AudioContext || window.webkitAudioContext)();
@@ -72,6 +85,7 @@ export class Voice {
     this.speaking.clear();
     this.onSpeaking(this.speaking);
     this.room.setPresence({ v: false, m: false });
+    this.onRecording(false);
     this.onChange();
   }
 

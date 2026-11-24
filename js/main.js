@@ -1182,14 +1182,17 @@ class App {
   // ============================================================ sesli sohbet
   async micTap() {
     if (!this.room || this.mode !== 'online' || !voiceSupported()) return;
-    if (!this.voice) this.voice = new Voice({ room: this.room, me: { id: this.me.id }, onChange: () => this.paintMic(), onSpeaking: (s) => this.paintSpeaking(s) });
+    if (!this.voice) this.voice = new Voice({ room: this.room, me: { id: this.me.id }, onChange: () => this.paintMic(), onSpeaking: (s) => this.paintSpeaking(s), onRecording: (on) => { this.sound.recording = on; } });
     if (this.voice.on) { this.voice.setMuted(!this.voice.muted); this.voice.resume(); return; }
     try {
       await this.voice.join();
       this.voice.sync(this.presence);
       FX.toast(this.stage, 'Sesli sohbettesin. Susturmak için düğmeye dokun.', 2600);
     } catch (e) {
-      this.globalToast(e && e.name === 'NotAllowedError' ? 'Mikrofon izni verilmedi' : 'Mikrofon açılamadı', 3000);
+      const n = (e && e.name) || '';
+      this.globalToast(n === 'NotAllowedError'
+        ? 'Mikrofon izni verilmedi. Ayarlar > Chrome > Mikrofon açık olmalı.'
+        : `Mikrofon açılamadı (${n || (e && e.message) || 'bilinmeyen hata'})`, 5000);
     }
     this.paintMic();
   }
